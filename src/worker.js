@@ -217,6 +217,7 @@ async function handleRequest(request, env) {
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
   if (["GET", "HEAD"].includes(request.method)) {
+    if (pathname === "/tokushoho") return assetResponse(request, "/", commerceDisclosure(request, env));
     if (pathname === "/pickup-example") return assetResponse(request, "/", pickupExample(request));
     if (pathname === "/") {
       const rows = await catalog(env);

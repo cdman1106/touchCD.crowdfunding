@@ -23,6 +23,10 @@ Node.js 22.13以上で `npm run dev` を実行し、表示されたURLを開き�
 
 旧バージョンで `CAMPAIGN_JSON` に登録した作品は、従来の予約と設定を保持して読み込みます。予約者データは保護された管理画面に表示します。支払い案内・決済・返金は手動運用です。
 
+## 特定商取引法に基づく表記
+
+`/tokushoho` をトップページと作品ページのフッターから開けます。公開する住所・電話番号・メールアドレス・問い合わせ対応時間・キャンセルと返品条件は、CloudflareのWorker設定でそれぞれ `COMMERCE_ADDRESS`、`COMMERCE_PHONE`、`COMMERCE_EMAIL`、`COMMERCE_CONTACT_HOURS`、`COMMERCE_RETURN_POLICY` に設定します。未登録の項目は掲載準備中と表示します。
+
 ## メール認証と会場受取
 
 共通設定として、認証コードの署名用の `EMAIL_VERIFICATION_SECRET`（32文字以上のランダムな値）をシークレットに保存します。次のどちらかの送信方式を設定し、`RESERVATIONS_OPEN=1` にすると本番予約を受け付けます。

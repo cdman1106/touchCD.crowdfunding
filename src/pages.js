@@ -15,6 +15,39 @@ function shell(request, body, options = {}) {
   return siteAssets["/"].replace(/{{(\w+)}}/g, (_, key) => values[key]);
 }
 
+function commerceDisclosure(request, env) {
+  const address = env.COMMERCE_ADDRESS?.trim();
+  const phone = env.COMMERCE_PHONE?.trim();
+  const email = env.COMMERCE_EMAIL?.trim();
+  const hours = env.COMMERCE_CONTACT_HOURS?.trim();
+  const returns = env.COMMERCE_RETURN_POLICY?.trim();
+  const rows = [
+    ["販売事業者", "松尾 一慶（屋号 慶）"],
+    ["事業所所在地", address || "掲載準備中"],
+    ["電話番号", phone || "掲載準備中"],
+    ["メールアドレス", email || "掲載準備中"],
+    ["問い合わせ対応時間", hours || "掲載準備中"],
+    ["販売価格", "作品ページに、商品1個あたりの税込価格を表示します。"],
+    ["商品代金以外の費用", "会場でお受け取りの場合、送料はかかりません。別途費用が発生する場合は、お支払い前に明示します。"],
+    ["支払い方法", "Stripeの決済画面に表示される方法をご利用いただけます。"],
+    ["支払い時期", "無料予約時に代金はかかりません。作品ごとの予約目標に達した場合は、メールで決済リンクと支払期限をご案内します。期限までに商品代金を前払いしてください。"],
+    ["申込期間・販売条件", "受付締切、予約上限、製造に必要な入金数は、各作品ページに記載します。"],
+    ["商品の引渡時期・方法", "製造条件を満たした作品は、各作品ページに記載した日時と会場でお渡しします。"],
+    ["製造不成立の場合", "支払期限までに製造に必要な入金数に達しなかった場合、受領した商品代金を全額返金します。対象のお客様にはメールでご案内します。"],
+    ["キャンセル・返品・不良品", returns || "支払い後のキャンセル・返品・不良品への対応は掲載準備中です。"],
+  ];
+  const pending = ![address, phone, email, hours, returns].every(Boolean);
+  const terms = rows.map(([label, value]) => `<div><dt>${escaped(label)}</dt><dd>${escaped(value)}</dd></div>`).join("");
+  return shell(request, `<main class="section-shell commerce-page">
+    <a class="crumb" href="/">トップページに戻る</a>
+    <h1>特定商取引法に基づく表記</h1>
+    <p class="commerce-intro">touchCDが販売する先行予約商品の取引条件です。</p>
+    ${pending ? '<p class="commerce-note">事業者の連絡先と一部の取引条件は掲載準備中です。</p>' : ""}
+    <dl class="commerce-details">${terms}</dl>
+    <p class="commerce-contact">touchCDへのお問い合わせは <a href="https://www.instagram.com/touchcdyasann/" rel="noopener noreferrer">公式Instagram（@touchcdyasann）</a> へご連絡ください。</p>
+  </main>`, { title: "特定商取引法に基づく表記｜touchCD", description: "touchCDの販売事業者、支払い、受け取り、返金に関するご案内。" });
+}
+
 function statusFor(data) {
   if (data.campaign.demo) return "サンプル";
   if (data.paid >= data.paidGoal) return "製造決定";

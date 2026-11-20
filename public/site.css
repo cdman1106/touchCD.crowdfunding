@@ -38,9 +38,19 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}b
 .guide{padding-top:16px;padding-bottom:50px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;list-style:none;margin:0;padding:0}
 .steps li{display:flex;gap:13px;align-items:start;padding:13px 0}.step-index{color:var(--green);font:800 22px/1 Inter,Arial,sans-serif;padding-top:4px}
 .steps h3{font-weight:800;font-size:17px}.steps p{color:var(--muted);font-size:13px;margin-top:4px;max-width:25em}
-.site-footer{border-top:1px solid var(--line);color:var(--muted)}.footer-inner{justify-content:flex-start;font-size:12px}.footer-inner .logo{color:var(--ink);margin-right:auto;font-size:24px}
+.site-footer{border-top:1px solid var(--line);color:var(--muted)}.footer-inner{justify-content:flex-start;flex-wrap:wrap;gap:12px 22px;padding-block:14px;font-size:14px}.footer-inner .logo{color:var(--ink);margin-right:auto;font-size:24px}
 .footer-inner .logo-disc{height:21px;width:21px}.footer-inner .logo-disc::after{inset:8px}
 .crumb{display:inline-block;color:var(--muted);font-size:13px;font-weight:700}
+.commerce-page{max-width:780px;padding-block:28px 55px}
+.commerce-page h1{font-size:clamp(26px,5vw,42px);line-height:1.3;margin:18px 0 10px}
+.commerce-intro,.commerce-note,.commerce-contact{font-size:16px;line-height:1.75}
+.commerce-intro,.commerce-note{color:var(--muted)}
+.commerce-note{margin-top:12px}
+.commerce-details{margin:22px 0 18px;border-top:1px solid var(--line)}
+.commerce-details>div{display:grid;grid-template-columns:minmax(9rem,1fr) minmax(0,2.5fr);gap:8px 18px;padding:13px 0;border-bottom:1px solid var(--line);font-size:16px;line-height:1.65}
+.commerce-details dt{font-weight:700}
+.commerce-details dd{margin:0;white-space:pre-line;overflow-wrap:anywhere}
+.commerce-contact a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
 .artist-page,.project-page,.not-found{padding-top:25px;padding-bottom:55px}
 .artist-heading{display:flex;align-items:center;gap:14px;margin:22px 0 33px}.artist-heading .logo-disc{width:40px;height:40px}.artist-heading .logo-disc::after{inset:16px}
 .artist-heading h1,.project-heading h1,.not-found h1{font-size:clamp(42px,6vw,80px);line-height:1.12;letter-spacing:-.065em;font-weight:900;overflow-wrap:anywhere}
@@ -88,6 +98,7 @@ input[type=checkbox]{margin-top:4px;accent-color:#8da726}.form-error{color:#ffae
   .admin-layout{grid-template-columns:minmax(175px,.8fr) minmax(0,2fr)}
 }
 @media(max-width:610px){
+  .commerce-details>div{grid-template-columns:1fr;gap:4px}
   .shell,.section-shell{width:calc(100% - 32px)}.header-inner{min-height:60px}.site-header nav{display:none}.logo{font-size:26px}
   .hero{margin-top:17px;display:flex;flex-direction:column;min-height:0}.hero-copy{padding:24px 0 18px}.hero h1{font-size:clamp(49px,12vw,72px);margin:12px 0}.hero-visual{min-height:0;aspect-ratio:1.62}
   .hero-visual::after{background:linear-gradient(180deg,#11121026,transparent 38%)}.hero-button{margin-top:13px}.hero-description{font-size:13px}
