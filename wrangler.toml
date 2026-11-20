@@ -1,0 +1,13 @@
+name = "touchcd-reserve"
+main = "dist/server/index.js"
+compatibility_date = "2026-01-01"
+keep_vars = true
+preview_urls = false
+
+[vars]
+SHOW_DEMO_CAMPAIGNS = "0"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "touchcd-reservations"
+migrations_dir = "migrations"

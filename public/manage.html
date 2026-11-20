@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>touchCD｜作品と予約の管理</title>
+<link rel="stylesheet" href="/site.css">
+<script type="module" src="/manage.js"></script>
+</head>
+<body class="admin-body">
+<header class="site-header"><div class="header-inner shell"><a class="logo" href="/"><span class="logo-disc" aria-hidden="true"></span>touch<span>CD</span></a><a class="header-cta" href="/">サイトを見る ↗</a></div></header>
+<main class="shell admin">
+  <h1>作品と予約の管理</h1>
+  <p id="admin-status" class="admin-status" role="status"></p>
+  <form id="login" class="admin-card" hidden>
+    <label>管理キー<input type="password" id="admin-key" required autocomplete="off"></label>
+    <button type="submit" class="primary">開く</button>
+  </form>
+  <div class="admin-layout" id="workspace" hidden>
+    <aside class="admin-card admin-side">
+      <div class="admin-heading"><h2>作品一覧</h2><button type="button" class="small-button" id="new-project">＋ 新規作成</button></div>
+      <ul id="project-list" class="project-list"></ul>
+    </aside>
+    <div class="admin-content">
+      <section class="admin-card">
+        <div class="admin-heading"><h2 id="editor-title">新しい作品</h2></div>
+        <p class="intake-note" id="intake-note" hidden>確認版では、ファンからの予約受付は停止中です。サンプル作品で予約操作を試せます。</p>
+        <div class="share-row" id="share-row" hidden><a id="view-project" href="/" target="_blank" rel="noopener noreferrer">作品ページを開く ↗</a><button class="small-button" type="button" id="copy-url">URLをコピー</button></div>
+        <p class="intake-note" id="mail-note" hidden>メール送信は設定待ちです。認証と支払い完了メールの本番利用には送信元の接続が必要です。</p>
+        <p id="fixed-note" hidden>サンプル作品です。予約数の設定を変更できます。</p>
+        <form id="project-form" hidden>
+          <div class="fields two">
+            <label>アーティスト名<input name="artist" required maxlength="100" placeholder="例：夜のレコード"></label>
+            <label>アーティストのURL名<input name="artistSlug" required minlength="2" maxlength="48" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="例：yoru-record" autocapitalize="none" spellcheck="false"></label>
+            <label>作品名<input name="title" required maxlength="100"></label>
+            <label>作品のURL名<input name="slug" required minlength="2" maxlength="48" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="例：first-ep" autocapitalize="none" spellcheck="false"></label>
+          </div>
+          <p class="field-note" id="path-preview"></p>
+          <label>作品紹介<textarea name="story" maxlength="1800" rows="4"></textarea></label>
+          <div class="fields two">
+            <label>商品写真のURL<input name="image" type="url" maxlength="1000" placeholder="https://"></label>
+            <label>楽曲のURL<input name="music" type="url" maxlength="1000" placeholder="https://"></label>
+            <label>税込価格（1個）<input name="price" type="number" min="1" max="1000000" value="2500" required></label>
+            <label>受付締切（日本時間）<input name="deadline" type="datetime-local"></label>
+          </div>
+          <label>受取日時・会場<input name="pickup" maxlength="250"></label>
+          <label>問い合わせ先のURL<input name="contact" type="url" maxlength="1000" placeholder="https:// または mailto:"></label>
+          <label>掲載範囲<select name="visibility"><option value="draft">下書き</option><option value="unlisted">リンク限定</option><option value="listed">作品一覧に掲載</option></select></label>
+          <label class="check-field"><input name="reservationOpen" type="checkbox">この作品の無料予約を受け付ける</label>
+          <button type="submit" class="primary">作品を保存</button>
+        </form>
+      </section>
+      <section class="admin-card" hidden id="settings-panel">
+        <h2>予約の条件</h2><p id="overview"></p>
+        <form id="settings">
+          <div class="fields">
+            <label>支払い案内を出す無料予約数<input type="number" name="reservation_goal" min="1" max="10000" required></label>
+            <label>製造を決める入金数<input type="number" name="paid_goal" min="1" max="10000" required></label>
+            <label>予約の上限<input type="number" name="capacity" min="1" max="10000" required></label>
+            <label><span id="offline-label">サイト外で受け付けた予約数</span><input type="number" name="offline_reserved" min="0" max="10000" required></label>
+            <label><span id="offline-paid-label">サイト外で確認した入金数</span><input type="number" name="offline_paid" min="0" max="10000" required></label>
+          </div>
+          <button type="submit" class="primary">設定を保存</button>
+        </form>
+      </section>
+      <section class="admin-card" hidden id="payment-panel">
+        <h2>支払い案内の設定</h2>
+        <p class="field-note" id="payment-progress"></p>
+        <form id="payment-settings-form">
+          <div class="fields two">
+            <label>支払期限（日本時間）<input name="deadline" type="datetime-local"></label>
+            <label>1個注文用の共通決済リンク<input name="checkout_url" type="url" maxlength="1500" placeholder="https://"></label>
+          </div>
+          <p class="field-note">2個以上を予約した人には、予約一覧でその個数分の決済リンクを登録します。</p>
+          <button type="submit" class="primary">支払い設定を保存</button>
+          <p class="field-note payment-feedback" id="payment-settings-feedback" role="status"></p>
+        </form>
+        <div class="payment-example-controls" id="payment-example-controls" hidden>
+          <label>見本の予約個数<select id="payment-example-quantity"><option value="1">1個</option><option value="2" selected>2個</option><option value="3">3個</option><option value="4">4個</option><option value="5">5個</option></select></label>
+          <button type="button" id="payment-example" class="small-button">支払い案内の見本を見る</button>
+        </div>
+      </section>
+      <section class="admin-card" id="entries-panel" hidden>
+        <div class="admin-heading"><h2>予約一覧</h2><button type="button" id="download" class="small-button" hidden>CSVを保存</button></div>
+        <label class="pickup-search">受付で提示された受取コード<input id="pickup-search" type="search" placeholder="例：72D4-963A-01CB" autocomplete="off" spellcheck="false"></label>
+        <ul id="entries"></ul>
+      </section>
+    </div>
+  </div>
+</main>
+<dialog id="payment-guide-dialog" aria-labelledby="payment-guide-title">
+  <div class="dialog-head"><h2 id="payment-guide-title">支払い案内</h2><button type="button" class="close" id="close-payment-guide" aria-label="閉じる">×</button></div>
+  <p id="payment-guide-note" class="dialog-note">作成した文面をコピーして、予約者に送れます。</p>
+  <label for="payment-guide-text" class="guide-label">件名と本文</label>
+  <textarea id="payment-guide-text" readonly rows="13"></textarea>
+  <div class="entry-actions"><button type="button" id="copy-payment-guide" class="primary">案内文をコピー</button><span id="payment-copy-status" role="status"></span></div>
+</dialog>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<dialog id="booking-dialog" aria-labelledby="booking-title">
+  <div class="dialog-head"><h2 id="booking-title">無料で予約する</h2><button type="button" class="close" aria-label="閉じる" id="close-reserve">×</button></div>
+  <p class="dialog-note" id="form-intro"></p>
+  <form id="booking-form">
+    <label class="customer-field">お名前<input type="text" name="name" autocomplete="name" maxlength="80" required></label>
+    <label class="customer-field preview-field">メールアドレス<input type="email" name="email" autocomplete="email" maxlength="254" required></label>
+    <label>希望個数<select name="quantity" id="quantity" required></select></label>
+    <p class="form-total" id="form-total"></p>
+    <label class="consent customer-field"><input type="checkbox" name="consent" value="yes" required><span>予約連絡・お支払い案内・会場受取の管理に連絡先を利用することに同意します。</span></label>
+    <p id="form-error" class="form-error" role="alert"></p>
+    <button class="primary" id="submit-reserve" type="submit">認証コードを受け取る <span aria-hidden="true">→</span></button>
+  </form>
+  <form id="verification-form" hidden>
+    <p class="dialog-note" id="verification-note"></p>
+    <label>6桁の認証コード<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" required></label>
+    <p id="verification-error" class="form-error" role="alert"></p>
+    <button class="primary" id="verify-reserve" type="submit">認証して予約する <span aria-hidden="true">→</span></button>
+    <div class="verification-actions"><button type="button" id="change-email">入力内容を変更する</button><button type="button" id="resend-code">コードを再送する</button></div>
+  </form>
+  <div id="booking-success" aria-live="polite" hidden><p id="success-text"></p><p id="booking-reference"></p><p><a class="text-link" href="/pickup-example" id="receipt-example-link" target="_blank" rel="noopener" hidden>支払い完了メールの見本を見る ↗</a></p><button type="button" class="primary" id="finish-reserve">閉じる</button></div>
+</dialog>
