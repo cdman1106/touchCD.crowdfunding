@@ -15,10 +15,11 @@ Node.js 22.13以上で `npm run dev` を実行し、表示されたURLを開き�
 ## Cloudflareで本番受付
 
 1. CloudflareのD1で `touchcd-reservations` を作成します。
-2. Workers & PagesでGitHubリポジトリ `cdman1106/touchCD.crowdfunding` をインポートし、Worker名を `touchcd-reserve`、本番ブランチを `main` にします。ビルドコマンドを `npm run build`、デプロイコマンドを `npm run deploy` に設定します。デプロイ時にD1のマイグレーションが適用されます。
-3. Workerの「Variables and Secrets」で、24文字以上のランダムな `ADMIN_TOKEN` をシークレットとして設定します。ローカルから行う場合は `npm ci`、`npm run build`、`npm run deploy` の順に実行し、`npx wrangler secret put ADMIN_TOKEN` で管理キーを設定します。
-4. `/manage` で作品と予約条件を登録します。問い合わせ先・作品紹介・商品写真・公開範囲・未来の予約締切・受取条件が入力されていることを確認し、その作品の受付を有効にします。
-5. 下記のメール送信方式を設定してから `RESERVATIONS_OPEN=1` を設定すると、作品単位で有効にした予約受付が始まります。Cloudflareの設定ではサンプル作品を表示しません。`PREVIEW_DEMO_ADMIN` はローカル確認専用です。
+2. Workers & PagesでGitHubリポジトリ `cdman1106/touchCD.crowdfunding` をインポートし、Worker名を `touchcd-reserve`、本番ブランチを `main` にします。デプロイコマンドは `npm run deploy` です。ビルドは `wrangler.toml` に設定してあるため、ダッシュボードのビルド欄は空欄にできます。
+3. Cloudflare Workers Buildsから `npm run deploy` を実行する場合、BuildsのAPIトークンに対象アカウントの **D1 Edit** 権限が必要です。デプロイ前にD1のマイグレーションを実行するためです。Cloudflareの標準トークンで認証エラーが出る場合は、[Workers BuildsのAPIトークン設定](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/#api-token)を確認してください。
+4. Workerの「Variables and Secrets」で、24文字以上のランダムな `ADMIN_TOKEN` をシークレットとして設定します。ローカルから行う場合は認証済みのWranglerで `npm ci`、`npm run deploy` の順に実行し、`npx wrangler secret put ADMIN_TOKEN` で管理キーを設定します。
+5. `/manage` で作品と予約条件を登録します。問い合わせ先・作品紹介・商品写真・公開範囲・未来の予約締切・受取条件が入力されていることを確認し、その作品の受付を有効にします。
+6. 下記のメール送信方式を設定してから `RESERVATIONS_OPEN=1` を設定すると、作品単位で有効にした予約受付が始まります。Cloudflareの設定ではサンプル作品を表示しません。`PREVIEW_DEMO_ADMIN` はローカル確認専用です。
 
 旧バージョンで `CAMPAIGN_JSON` に登録した作品は、従来の予約と設定を保持して読み込みます。予約者データは保護された管理画面に表示します。支払い案内・決済・返金は手動運用です。
 
