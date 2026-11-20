@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 
 const paths = {
   "/": "index.html",
@@ -18,5 +19,21 @@ const output = new URL("../dist/server/", import.meta.url);
 const modules = await Promise.all(["catalog", "pages", "mail", "payment-settings", "worker"].map((name) =>
   readFile(new URL(`../src/${name}.js`, import.meta.url), "utf8")));
 const worker = modules.join("\n");
+// Build a snapshot from the original schema-only migrations. Future migrations
+// remain separate so data transformations are never marked as already applied.
+const initialMigrations = [
+  "0001_reservations.sql",
+  "0002_project_catalog.sql",
+  "0003_email_and_pickup.sql",
+  "0004_payment_settings.sql",
+];
+const migrationSql = await Promise.all(initialMigrations.map((name) =>
+  readFile(new URL(`../migrations/${name}`, import.meta.url), "utf8")));
+const database = new DatabaseSync(":memory:");
+for (const sql of migrationSql) database.exec(sql);
+const initialSchema = database.prepare(`SELECT sql FROM sqlite_schema
+  WHERE type IN ('table', 'index') AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rowid`).all()
+  .map(({ sql }) => sql.replace(/^CREATE (TABLE|INDEX) /i, "CREATE $1 IF NOT EXISTS "));
+database.close();
 await mkdir(output, { recursive: true });
-await writeFile(new URL("index.js", output), `const siteAssets = ${JSON.stringify(Object.fromEntries(files))};\n${worker}`);
+await writeFile(new URL("index.js", output), `const siteAssets = ${JSON.stringify(Object.fromEntries(files))};\nconst initialSchema = ${JSON.stringify(initialSchema)};\nconst initialMigrations = ${JSON.stringify(initialMigrations)};\n${worker}`);

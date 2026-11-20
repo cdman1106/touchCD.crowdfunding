@@ -288,12 +288,38 @@ async function handleRequest(request, env) {
   return json({ error: "ページが見つかりません。" }, 404);
 }
 
+async function initializeEmptyDatabase(db) {
+  const existing = await db.prepare(`SELECT name FROM sqlite_schema WHERE type = 'table'
+    AND name NOT LIKE 'sqlite_%' AND name NOT IN ('_cf_KV', 'd1_migrations') LIMIT 1`).first();
+  if (existing) return false;
+  // All statements are idempotent, so simultaneous first requests can safely race.
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS d1_migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    )`),
+    ...initialSchema.map((sql) => db.prepare(sql)),
+    ...initialMigrations.map((name) => db.prepare("INSERT OR IGNORE INTO d1_migrations (name) VALUES (?)").bind(name)),
+  ]);
+  return true;
+}
+
 export default {
   async fetch(request, env) {
     try {
       return await handleRequest(request, env);
     } catch (error) {
-      console.error("Request failed", error instanceof Error ? error.message : "Unknown error");
+      const message = error instanceof Error ? error.message : "Unknown error";
+      if (env.DB && ["GET", "HEAD"].includes(request.method) && /no such table: (?:main\.)?(?:projects|artists|campaign_settings|reservations)\b/i.test(message)) {
+        try {
+          await initializeEmptyDatabase(env.DB);
+          // A concurrent request may already have initialized the database.
+          return await handleRequest(request, env);
+        } catch (retryError) {
+          console.error("Database startup failed", retryError instanceof Error ? retryError.message : "Unknown error");
+        }
+      }
+      console.error("Request failed", message);
       return json({ error: "一時的に利用できません。時間をおいてお試しください。" }, 503);
     }
   },
