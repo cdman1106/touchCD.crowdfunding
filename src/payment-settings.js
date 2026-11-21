@@ -50,7 +50,7 @@ const paymentDate = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo", dateStyle: "long", timeStyle: "short",
 });
 
-function paymentGuide(campaign, { name, quantity, price }, deadline, link, demo = false) {
+function paymentGuide(campaign, { name, quantity, price }, deadline, link, disclosureUrl, demo = false) {
   const subject = `【touchCD】${campaign.title}のお支払いのご案内`;
   const text = [
     `${name} 様`,
@@ -61,8 +61,11 @@ function paymentGuide(campaign, { name, quantity, price }, deadline, link, demo 
     `予約個数：${quantity}個`,
     `お支払い合計：${amount(price * quantity)}（税込）`,
     `お支払い期限：${paymentDate.format(new Date(deadline))}（日本時間）`,
-    `決済リンク：${link}`,
     `お受け取り：${campaign.pickup}`,
+    "",
+    "お支払い後のお客様都合によるキャンセル・返品はお受けできません。",
+    `返品・不良品対応（特定商取引法に基づく表記）：${disclosureUrl}`,
+    `決済リンク：${link}`,
     "",
     "お支払いの際は、無料予約に使ったメールアドレスをご入力ください。",
     "入金を確認できましたら、受付で提示する支払い完了メールをお送りします。",
@@ -75,11 +78,12 @@ function paymentGuide(campaign, { name, quantity, price }, deadline, link, demo 
 async function draftPaymentGuide(request, env, campaign) {
   const body = await readBody(request);
   const settings = await getPaymentSettings(env.DB, campaign);
+  const disclosureUrl = new URL("/tokushoho", request.url).href;
   if (campaign.demo) {
     const quantity = body?.quantity;
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return json({ error: "見本の個数を選んでください。" }, 400);
     const deadline = settings.deadline || new Date(Date.now() + 3 * 86400_000).toISOString();
-    return json(paymentGuide(campaign, { name: "サンプル", quantity, price: campaign.price }, deadline, "［見本の決済リンク］", true));
+    return json(paymentGuide(campaign, { name: "サンプル", quantity, price: campaign.price }, deadline, "［見本の決済リンク］", disclosureUrl, true));
   }
   if (!uuidLike(body?.id)) return json({ error: "案内を作る予約を選んでください。" }, 400);
   const [state, entry] = await Promise.all([
@@ -97,5 +101,5 @@ async function draftPaymentGuide(request, env, campaign) {
     return json({ error: entry.quantity > 1 ? `${entry.quantity}個分の個別決済リンクをこの予約に保存してください。` :
       "作品の共通決済リンク、またはこの予約の個別決済リンクを保存してください。" }, 409);
   }
-  return json(paymentGuide(campaign, { ...entry, price: campaign.price }, settings.deadline, link));
+  return json(paymentGuide(campaign, { ...entry, price: campaign.price }, settings.deadline, link, disclosureUrl));
 }

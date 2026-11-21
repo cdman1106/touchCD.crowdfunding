@@ -16,17 +16,28 @@ function shell(request, body, options = {}) {
 }
 
 function commerceDisclosure(request, env) {
-  const address = env.COMMERCE_ADDRESS?.trim();
-  const phone = env.COMMERCE_PHONE?.trim();
-  const email = env.COMMERCE_EMAIL?.trim();
-  const hours = env.COMMERCE_CONTACT_HOURS?.trim();
+  const address = env.COMMERCE_ADDRESS?.trim() || "〒807-0806 福岡県北九州市八幡西区御開1丁目23−1 角のたばこ屋";
+  const phone = env.COMMERCE_PHONE?.trim() || "070-4072-7527";
+  const email = env.COMMERCE_EMAIL?.trim() || "cdman1106@gmail.com";
+  const hours = env.COMMERCE_CONTACT_HOURS?.trim() || "9:00〜18:00";
   const returns = env.COMMERCE_RETURN_POLICY?.trim();
+  const returnTerms = returns ? [["キャンセル・返品・不良品", returns]] : [
+    ["お客様都合のキャンセル・返品", "お支払い完了後は、お客様のご都合によるキャンセル・返品・交換はお受けできません。"],
+    ["返品・交換の対象", "当方が販売した商品に不備がある場合は、返品・交換の対象です。touchCD本体や提供する音源・サイトの不具合により音源を聴けない場合、当方からの発送時点ですでに破損していた場合、当方からお渡しした商品が受取時点で破損していた場合、注文と異なる商品をお渡しした場合が含まれます。"],
+    ["返品・交換の対象外", [
+      "・NFC非搭載のスマートフォンや、端末側のNFC設定によりサイトが開けない場合",
+      "・お客様の通信環境や端末側の不具合が原因で、サイトを開けない、または音源を再生できない場合",
+      "・受け取り後のお客様の取り扱いによる破損、紛失、改造、通常使用による摩耗",
+      "・アーティストが販売者である取引で、当方が正常品を引き渡した後にアーティスト側の保管・販売過程で破損した場合。ご購入先にご連絡ください。",
+    ].join("\n")],
+    ["不備のご連絡と返送料", "商品に不備があった場合は、受け取り後、状況が分かり次第、注文情報と不備の内容を上記メールアドレスまでお知らせください。当方に原因がある不備で返送が必要な場合、返送料は当方が負担します。"],
+  ];
   const rows = [
     ["販売事業者", "松尾 一慶（屋号 慶）"],
-    ["事業所所在地", address || "掲載準備中"],
-    ["電話番号", phone || "掲載準備中"],
-    ["メールアドレス", email || "掲載準備中"],
-    ["問い合わせ対応時間", hours || "掲載準備中"],
+    ["事業所所在地", address],
+    ["電話番号", phone],
+    ["メールアドレス", email],
+    ["問い合わせ対応時間", hours],
     ["販売価格", "作品ページに、商品1個あたりの税込価格を表示します。"],
     ["商品代金以外の費用", "会場でお受け取りの場合、送料はかかりません。別途費用が発生する場合は、お支払い前に明示します。"],
     ["支払い方法", "Stripeの決済画面に表示される方法をご利用いただけます。"],
@@ -34,15 +45,13 @@ function commerceDisclosure(request, env) {
     ["申込期間・販売条件", "受付締切、予約上限、製造に必要な入金数は、各作品ページに記載します。"],
     ["商品の引渡時期・方法", "製造条件を満たした作品は、各作品ページに記載した日時と会場でお渡しします。"],
     ["製造不成立の場合", "支払期限までに製造に必要な入金数に達しなかった場合、受領した商品代金を全額返金します。対象のお客様にはメールでご案内します。"],
-    ["キャンセル・返品・不良品", returns || "支払い後のキャンセル・返品・不良品への対応は掲載準備中です。"],
+    ...returnTerms,
   ];
-  const pending = ![address, phone, email, hours, returns].every(Boolean);
   const terms = rows.map(([label, value]) => `<div><dt>${escaped(label)}</dt><dd>${escaped(value)}</dd></div>`).join("");
   return shell(request, `<main class="section-shell commerce-page">
     <a class="crumb" href="/">トップページに戻る</a>
     <h1>特定商取引法に基づく表記</h1>
     <p class="commerce-intro">touchCDが販売する先行予約商品の取引条件です。</p>
-    ${pending ? '<p class="commerce-note">事業者の連絡先と一部の取引条件は掲載準備中です。</p>' : ""}
     <dl class="commerce-details">${terms}</dl>
     <p class="commerce-contact">touchCDへのお問い合わせは <a href="https://www.instagram.com/touchcdyasann/" rel="noopener noreferrer">公式Instagram（@touchcdyasann）</a> へご連絡ください。</p>
   </main>`, { title: "特定商取引法に基づく表記｜touchCD", description: "touchCDの販売事業者、支払い、受け取り、返金に関するご案内。" });
@@ -143,6 +152,7 @@ function projectPage(request, data) {
   ${guide({ payment: `予約が${reservationGoal}個集まったら、メールでご案内します。`, production: `${paidGoal}個分のお支払いが確認できたら製造し、会場でお渡しします。` })}
   <details class="faq"><summary>当日の受取方法は？</summary><p>お支払い完了メールを受付でご提示ください。スタッフがメールに記載された受取コードを確認します。</p></details>
   <details class="faq"><summary>製造が決まらなかったら？</summary><p>お支払い前に終了した場合、料金はかかりません。お支払い後に製造条件を満たさなかった場合は全額返金します。</p></details>
+  <details class="faq"><summary>キャンセル・返品について</summary><p>お支払い後のお客様都合によるキャンセル・返品はお受けできません。商品に不備があった場合の対応は、<a class="text-link" href="/tokushoho">特定商取引法に基づく表記</a>をご確認ください。</p></details>
   </main>${siteAssets.booking}`, {
     title: `${campaign.title}｜${campaign.artist}｜touchCD`, description: campaign.story.slice(0, 120),
     image: campaign.image || "/low-frequency.webp", unlisted: campaign.visibility === "unlisted",

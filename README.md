@@ -25,7 +25,7 @@ Node.js 22.13以上で `npm run dev` を実行し、表示されたURLを開き�
 
 ## 特定商取引法に基づく表記
 
-`/tokushoho` をトップページと作品ページのフッターから開けます。公開する住所・電話番号・メールアドレス・問い合わせ対応時間・キャンセルと返品条件は、CloudflareのWorker設定でそれぞれ `COMMERCE_ADDRESS`、`COMMERCE_PHONE`、`COMMERCE_EMAIL`、`COMMERCE_CONTACT_HOURS`、`COMMERCE_RETURN_POLICY` に設定します。未登録の項目は掲載準備中と表示します。
+`/tokushoho` をトップページと作品ページのフッターから開けます。公開用の住所・電話番号・メールアドレス・問い合わせ対応時間・キャンセルと返品条件は、CloudflareのWorker設定でそれぞれ `COMMERCE_ADDRESS`、`COMMERCE_PHONE`、`COMMERCE_EMAIL`、`COMMERCE_CONTACT_HOURS`、`COMMERCE_RETURN_POLICY` を設定すると上書きできます。作品ページと支払い案内にも返品条件へのリンクがあります。
 
 ## メール認証と会場受取
 

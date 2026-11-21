@@ -43,9 +43,8 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}b
 .crumb{display:inline-block;color:var(--muted);font-size:13px;font-weight:700}
 .commerce-page{max-width:780px;padding-block:28px 55px}
 .commerce-page h1{font-size:clamp(26px,5vw,42px);line-height:1.3;margin:18px 0 10px}
-.commerce-intro,.commerce-note,.commerce-contact{font-size:16px;line-height:1.75}
-.commerce-intro,.commerce-note{color:var(--muted)}
-.commerce-note{margin-top:12px}
+.commerce-intro,.commerce-contact{font-size:16px;line-height:1.75}
+.commerce-intro{color:var(--muted)}
 .commerce-details{margin:22px 0 18px;border-top:1px solid var(--line)}
 .commerce-details>div{display:grid;grid-template-columns:minmax(9rem,1fr) minmax(0,2.5fr);gap:8px 18px;padding:13px 0;border-bottom:1px solid var(--line);font-size:16px;line-height:1.65}
 .commerce-details dt{font-weight:700}
