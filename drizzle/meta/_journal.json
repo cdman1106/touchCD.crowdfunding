@@ -29,6 +29,13 @@
       "when": 1795098600000,
       "tag": "0004_payment_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795099200000,
+      "tag": "0005_release_details",
+      "breakpoints": true
     }
   ]
 }

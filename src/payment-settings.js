@@ -50,7 +50,8 @@ const paymentDate = new Intl.DateTimeFormat("ja-JP", {
   timeZone: "Asia/Tokyo", dateStyle: "long", timeStyle: "short",
 });
 
-function paymentGuide(campaign, { name, quantity, price }, deadline, link, disclosureUrl, demo = false) {
+function paymentGuide(campaign, { name, quantity, price, fulfillment, shipping_fee = 0 }, deadline, link, disclosureUrl, demo = false) {
+  const shipping = fulfillment === "shipping";
   const subject = `【touchCD】${campaign.title}のお支払いのご案内`;
   const text = [
     `${name} 様`,
@@ -59,16 +60,16 @@ function paymentGuide(campaign, { name, quantity, price }, deadline, link, discl
     "",
     `作品：${campaign.title} / ${campaign.artist}`,
     `予約個数：${quantity}個`,
-    `お支払い合計：${amount(price * quantity)}（税込）`,
+    `お支払い合計：${amount(price * quantity + shipping_fee)}（税込${shipping ? `・送料 ${amount(shipping_fee)}込み` : ""}）`,
     `お支払い期限：${paymentDate.format(new Date(deadline))}（日本時間）`,
-    `お受け取り：${campaign.pickup}`,
+    `お受け取り：${shipping ? `自宅配送（${campaign.shippingNote || "成立後に発送案内"}）` : campaign.pickup}`,
     "",
     "お支払い後のお客様都合によるキャンセル・返品はお受けできません。",
     `返品・不良品対応（特定商取引法に基づく表記）：${disclosureUrl}`,
     `決済リンク：${link}`,
     "",
     "お支払いの際は、無料予約に使ったメールアドレスをご入力ください。",
-    "入金を確認できましたら、受付で提示する支払い完了メールをお送りします。",
+    "入金を確認できましたら、お支払い完了メールをお送りします。",
     "必要な入金数に達せず製造が決まらなかった場合は、返金をご案内します。",
     "touchCD",
   ].join("\n");
@@ -88,7 +89,7 @@ async function draftPaymentGuide(request, env, campaign) {
   if (!uuidLike(body?.id)) return json({ error: "案内を作る予約を選んでください。" }, 400);
   const [state, entry] = await Promise.all([
     publicData(env, campaign),
-    env.DB.prepare("SELECT name, quantity, paid, payment_url FROM reservations WHERE id = ? AND campaign_id = ?")
+    env.DB.prepare("SELECT name, quantity, paid, payment_url, fulfillment, shipping_fee FROM reservations WHERE id = ? AND campaign_id = ?")
       .bind(body.id, campaign.id).first(),
   ]);
   if (!entry || entry.paid) return json({ error: "未入金の予約が見つかりません。" }, 409);
@@ -96,9 +97,9 @@ async function draftPaymentGuide(request, env, campaign) {
     return json({ error: `無料予約が${state.reservationGoal}個に達してから案内を作成できます。現在は${state.reserved}個です。` }, 409);
   }
   if (!(Date.parse(settings.deadline) > Date.now())) return json({ error: "作品の支払期限に今より後の日時を設定してください。" }, 409);
-  const link = entry.payment_url || (entry.quantity === 1 ? settings.checkout_url : "");
+  const link = entry.payment_url || (entry.quantity === 1 && entry.shipping_fee === 0 ? settings.checkout_url : "");
   if (!link) {
-    return json({ error: entry.quantity > 1 ? `${entry.quantity}個分の個別決済リンクをこの予約に保存してください。` :
+    return json({ error: entry.shipping_fee > 0 ? "送料込みの金額で作成した個別決済リンクを保存してください。" : entry.quantity > 1 ? `${entry.quantity}個分の個別決済リンクをこの予約に保存してください。` :
       "作品の共通決済リンク、またはこの予約の個別決済リンクを保存してください。" }, 409);
   }
   return json(paymentGuide(campaign, { ...entry, price: campaign.price }, settings.deadline, link, disclosureUrl));

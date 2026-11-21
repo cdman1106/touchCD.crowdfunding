@@ -16,7 +16,12 @@ const sampleCampaigns = [{
   title: "波のあとで",
   artist: "夜凪",
   story: "海辺の街で生まれた夜凪の『波のあとで』。ライブで聴いたあの曲を、赤い夕陽のジャケットと一緒に持ち帰る。透明なミニCDケースに、作品へのリンクをしのばせました。",
-  pickup: "ライブ会場の物販卓",
+  eventInfo: "夜凪ワンマン「波のあとで」／サンプル公演",
+  pickup: "公演当日 18:00〜20:00／ライブ会場の物販卓",
+  audioAt: "2027-01-30T18:00:00+09:00",
+  releaseUpdate: "この作品で無料予約と受取方法の選択を体験できます。",
+  shippingNote: "公演後、順次発送予定（国内のみ）",
+  shippingFee: 500,
   price: 2500,
   image: "/cd-keychain.webp",
   visibility: "listed",
@@ -43,6 +48,8 @@ function fromRow(row) {
     id: row.id, artistSlug: row.artist_slug, slug: row.slug, title: row.title, artist: row.artist_name,
     story: row.story, pickup: row.pickup, price: row.price, deadline: row.deadline, image: row.image,
     music: row.music, contact: row.contact, visibility: row.visibility,
+    eventInfo: row.event_info, audioAt: row.audio_at, releaseUpdate: row.release_update,
+    shippingNote: row.shipping_note, shippingFee: row.shipping_fee,
     reservationOpen: Boolean(row.reservation_open), managed: true, closesAt: Date.parse(row.deadline),
   };
 }
@@ -119,6 +126,27 @@ async function saveProject(request, env) {
       !visibilityOptions.includes(visibility) || typeof reservationOpen !== "boolean") {
     return json({ error: "アーティスト名、公開設定、作品名、価格、URL識別名をご確認ください。" }, 400);
   }
+  const details = {};
+  for (const [key, max] of Object.entries({ eventInfo: 250, audioAt: 32, releaseUpdate: 1200, shippingNote: 250 })) {
+    if (!Object.hasOwn(form, key)) continue;
+    if (typeof form[key] !== "string" || form[key].trim().length > max) {
+      return json({ error: "公演情報・お知らせ・発送案内の入力内容をご確認ください。" }, 400);
+    }
+    details[key] = form[key].trim();
+  }
+  const current = id ? await findCampaign(env, { id }, true) : null;
+  if (id && (!current?.managed || current.artistSlug !== artistSlug || current.slug !== slug || current.artist !== artist)) {
+    return json({ error: "既存作品のURLとアーティスト名は固定です。" }, 409);
+  }
+  const { eventInfo = "", audioAt = "", releaseUpdate = "", shippingNote = "", shippingFee = null } = {
+    ...current,
+    ...details,
+    ...(Object.hasOwn(form, "shippingFee") ? { shippingFee: form.shippingFee } : {}),
+  };
+  if (!validPaymentDeadline(audioAt) || (shippingFee !== null &&
+      (!Number.isInteger(shippingFee) || shippingFee < 0 || shippingFee > 100000 || !shippingNote))) {
+    return json({ error: "音源公開予定日と、配送の送料・発送案内をご確認ください。" }, 400);
+  }
   const closesAt = Date.parse(deadline);
   if ((deadline && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/.test(deadline) || !Number.isFinite(closesAt))) ||
       !allowedUrl(image) || !allowedUrl(music) || !allowedUrl(contact, true)) {
@@ -127,14 +155,12 @@ async function saveProject(request, env) {
   if (reservationOpen && (visibility === "draft" || !story || !pickup || !contact || !image || !Number.isFinite(closesAt) || closesAt <= Date.now())) {
     return json({ error: "受付を始めるには公開設定、作品紹介、画像、未来の締切、受取案内、問い合わせ先を設定してください。" }, 400);
   }
-  const args = [title, story, pickup, price, deadline, image, music, contact, visibility, Number(reservationOpen)];
+  const args = [title, story, pickup, price, deadline, image, music, contact, visibility, Number(reservationOpen),
+    eventInfo, audioAt, releaseUpdate, shippingNote, shippingFee];
   if (id) {
-    const current = await findCampaign(env, { id }, true);
-    if (!current?.managed || current.artistSlug !== artistSlug || current.slug !== slug || current.artist !== artist) {
-      return json({ error: "既存作品のURLとアーティスト名は固定です。" }, 409);
-    }
     const changed = await env.DB.prepare(`UPDATE projects SET title = ?, story = ?, pickup = ?, price = ?,
-      deadline = ?, image = ?, music = ?, contact = ?, visibility = ?, reservation_open = ?
+      deadline = ?, image = ?, music = ?, contact = ?, visibility = ?, reservation_open = ?,
+      event_info = ?, audio_at = ?, release_update = ?, shipping_note = ?, shipping_fee = ?
       WHERE id = ? AND (price = ? OR (
         NOT EXISTS (SELECT 1 FROM reservations WHERE campaign_id = ?) AND
         COALESCE((SELECT offline_reserved FROM campaign_settings WHERE campaign_id = ?), 0) = 0
@@ -145,8 +171,9 @@ async function saveProject(request, env) {
   const projectId = crypto.randomUUID();
   const artistInsert = env.DB.prepare("INSERT INTO artists (slug, name) VALUES (?, ?) ON CONFLICT(slug) DO NOTHING").bind(artistSlug, artist);
   const projectInsert = env.DB.prepare(`
-    INSERT INTO projects (id, artist_slug, slug, title, story, pickup, price, deadline, image, music, contact, visibility, reservation_open)
-    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM artists WHERE slug = ? AND name = ?)
+    INSERT INTO projects (id, artist_slug, slug, title, story, pickup, price, deadline, image, music, contact, visibility, reservation_open,
+      event_info, audio_at, release_update, shipping_note, shipping_fee)
+    SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM artists WHERE slug = ? AND name = ?)
     ON CONFLICT(artist_slug, slug) DO NOTHING
   `).bind(projectId, artistSlug, slug, ...args, artistSlug, artist);
   const [, created] = await env.DB.batch([artistInsert, projectInsert]);

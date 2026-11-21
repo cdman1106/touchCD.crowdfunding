@@ -44,7 +44,15 @@
             <label>税込価格（1個）<input name="price" type="number" min="1" max="1000000" value="2500" required></label>
             <label>受付締切（日本時間）<input name="deadline" type="datetime-local"></label>
           </div>
-          <label>受取日時・会場<input name="pickup" maxlength="250"></label>
+          <label>公演名・開催情報<input name="eventInfo" maxlength="250" placeholder="例：12月18日 ワンマンライブ"></label>
+          <label>会場受取の日時・場所<input name="pickup" maxlength="250"></label>
+          <div class="fields two">
+            <label>自宅配送の送料（税込・1注文）<input name="shippingFee" type="number" min="0" max="100000" placeholder="空欄は会場受取のみ"></label>
+            <label>音源公開予定（日本時間）<input name="audioAt" type="datetime-local"></label>
+          </div>
+          <label>発送案内（配送を受け付けるとき）<input name="shippingNote" maxlength="250" placeholder="例：公演後2週間を目安に発送"></label>
+          <p class="field-note">送料無料で配送する場合は送料に0を入力します。音源公開予定を設定すると、日時以降に楽曲リンクが表示されます。</p>
+          <label>作品ページのお知らせ<textarea name="releaseUpdate" maxlength="1200" rows="3"></textarea></label>
           <label>問い合わせ先のURL<input name="contact" type="url" maxlength="1000" placeholder="https:// または mailto:"></label>
           <label>掲載範囲<select name="visibility"><option value="draft">下書き</option><option value="unlisted">リンク限定</option><option value="listed">作品一覧に掲載</option></select></label>
           <label class="check-field"><input name="reservationOpen" type="checkbox">この作品の無料予約を受け付ける</label>
@@ -72,7 +80,7 @@
             <label>支払期限（日本時間）<input name="deadline" type="datetime-local"></label>
             <label>1個注文用の共通決済リンク<input name="checkout_url" type="url" maxlength="1500" placeholder="https://"></label>
           </div>
-          <p class="field-note">2個以上を予約した人には、予約一覧でその個数分の決済リンクを登録します。</p>
+          <p class="field-note">複数個または送料がかかる注文では、予約一覧で総額に合った個別決済リンクを登録します。</p>
           <button type="submit" class="primary">支払い設定を保存</button>
           <p class="field-note payment-feedback" id="payment-settings-feedback" role="status"></p>
         </form>

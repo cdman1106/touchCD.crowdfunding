@@ -6,6 +6,9 @@ if (form) initializeBooking();
 function initializeBooking() {
   const dialog = $("booking-dialog");
   const quantity = $("quantity");
+  const delivery = $("fulfillment-field");
+  const address = $("shipping-address");
+  const shippingFields = $("shipping-address-fields");
   const view = document.querySelector("[data-project]");
   const params = new URLSearchParams({ artist: view.dataset.artist, project: view.dataset.project });
   let data;
@@ -19,29 +22,38 @@ function initializeBooking() {
   function render() {
     const { campaign, reservationGoal, paidGoal, capacity, reserved, paid, accepting } = data;
     const booked = Math.min(capacity, reserved + demoCount);
-    const collectingPayment = booked >= reservationGoal || paid >= paidGoal;
     const canReserve = accepting && booked < capacity;
-    set("progress-label", collectingPayment ? "入金済み" : "無料予約");
-    set("reservation-count", collectingPayment ? paid : booked);
-    set("reservation-target", collectingPayment ? paidGoal : reservationGoal);
-    set("progress-note", collectingPayment ?
-      `無料予約${booked}個 / ${paidGoal}個分の入金で製造` :
-      `無料予約${reservationGoal}個で、お支払いをご案内`);
-    const bar = $("progress");
-    bar.max = collectingPayment ? paidGoal : reservationGoal;
-    bar.value = collectingPayment ? paid : booked;
-    if (!campaign.demo && paid >= paidGoal) set("campaign-status", "製造決定");
-    else if (booked >= capacity) set("campaign-status", "予定数到達");
+    set("reservation-count", booked);
+    set("reservation-note", booked >= reservationGoal ? "支払い案内の条件を達成しました。" : `あと${reservationGoal - booked}個で支払い案内へ。`);
+    $("reservation-progress").max = reservationGoal;
+    set("reservation-target", reservationGoal);
+    $("reservation-progress").value = Math.min(booked, reservationGoal);
+    set("payment-count", paid);
+    set("payment-note", paid >= paidGoal ? "製造条件を達成しました。" : `あと${paidGoal - paid}個分のお支払いで製造決定。`);
+    $("payment-progress").max = paidGoal;
+    set("payment-target", paidGoal);
+    $("payment-progress").value = Math.min(paid, paidGoal);
     $("open-reserve").disabled = !canReserve;
-    set("booking-note", canReserve ? "予約時のお支払いはありません" :
-      booked >= capacity ? "予定数に達しました" : "現在、予約を受け付けていません");
+    $("mobile-reserve").disabled = !canReserve;
+    $("mobile-booking").hidden = !canReserve;
+    set("booking-note", canReserve ? "予約時のお支払いは0円です。" :
+      booked >= capacity ? "予定数に達しました。" : "現在、予約を受け付けていません。");
+    set("campaign-status", campaign.demo && booked >= capacity ? "サンプル・予定数到達" : data.status);
   }
 
   function updateTotal() {
-    set("form-total", `後日のお支払い予定額 ${money(data.campaign.price * Number(quantity.value))}（税込）`);
+    const shipping = form.elements.fulfillment.value === "shipping" && !delivery.disabled;
+    const fee = shipping ? data.campaign.shippingFee : 0;
+    const showAddress = shipping && !data.campaign.demo;
+    address.hidden = !shipping;
+    address.disabled = !showAddress;
+    shippingFields.hidden = !showAddress;
+    $("shipping-preview-note").hidden = !data.campaign.demo;
+    set("form-total", `今のお支払い 0円 ／ 後日のお支払い予定 ${money(data.campaign.price * Number(quantity.value) + fee)}（税込${shipping ? `・送料${money(fee)}込み` : ""}）`);
   }
 
-  $("open-reserve").addEventListener("click", () => {
+  function openBooking() {
+    if (!data || $("open-reserve").disabled || dialog.open) return;
     round++;
     form.reset();
     verification.reset();
@@ -64,9 +76,28 @@ function initializeBooking() {
     });
     set("form-intro", data.campaign.demo ? "確認版では、入力したメールアドレスをサーバーに送りません。認証コードは次の画面に表示されます。" : "今お支払いいただく金額は0円です。");
     $("resend-code").hidden = data.campaign.demo;
-    $("submit-reserve").firstChild.textContent = data.campaign.demo ? "確認コードを表示する " : "認証コードを受け取る ";
+    set("submit-reserve", data.campaign.demo ? "確認コードを表示する" : "認証コードを受け取る");
+    delivery.hidden = data.campaign.shippingFee == null;
+    delivery.disabled = delivery.hidden;
+    if (!delivery.hidden) set("shipping-option", `自宅配送（送料 ${money(data.campaign.shippingFee)}）`);
     updateTotal();
     dialog.showModal();
+  }
+
+  $("open-reserve").addEventListener("click", openBooking);
+  $("mobile-reserve").addEventListener("click", openBooking);
+  delivery.addEventListener("change", updateTotal);
+  $("share-project").addEventListener("click", async () => {
+    const url = location.origin + location.pathname;
+    try {
+      if (navigator.share) await navigator.share({ title: document.title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        set("share-result", "作品ページのURLをコピーしました。");
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") set("share-result", "ブラウザの共有機能からURLをコピーしてください。");
+    }
   });
 
   dialog.addEventListener("close", () => {
@@ -129,7 +160,7 @@ function initializeBooking() {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(form));
-    reservation = { ...values, quantity: Number(values.quantity), price: data.campaign.price, consent: values.consent === "yes" };
+    reservation = { ...values, quantity: Number(values.quantity), price: data.campaign.price, shippingFee: values.fulfillment === "shipping" ? data.campaign.shippingFee : 0, consent: values.consent === "yes" };
     prepareCode($("submit-reserve"), "form-error");
   });
 
@@ -148,14 +179,14 @@ function initializeBooking() {
         if (code !== demoCode) throw new Error("サンプルコードをもう一度ご確認ください。");
         demoCount += reservation.quantity;
         set("success-text", "メール認証と無料予約の流れを体験できました。");
-        set("booking-reference", "実際のメール送信や支払いは発生しません。");
-        $("receipt-example-link").hidden = false;
+        set("booking-reference", reservation.fulfillment === "shipping" ? "自宅配送のサンプル予約です。メール送信や支払いは発生しません。" : "会場受取のサンプル予約です。メール送信や支払いは発生しません。");
+        $("receipt-example-link").hidden = reservation.fulfillment === "shipping";
         render();
       } else {
         const result = await api("reservations", { ...reservation, verificationId, code });
         if (current !== round || !dialog.open) return;
         set("success-text", "メール認証が完了し、無料予約を受け付けました。条件を満たしたら同じアドレスへお支払いをご案内します。");
-        set("booking-reference", `予約番号 ${result.id}`);
+        set("booking-reference", `予約番号 ${result.id} ／ ${reservation.fulfillment === "shipping" ? "自宅配送" : "会場受取"}`);
         loadCampaign().catch(() => {});
       }
       verification.hidden = true;

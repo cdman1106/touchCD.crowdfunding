@@ -157,15 +157,18 @@ async function startVerification(request, env, campaign) {
   return json({ verificationId: id });
 }
 
-function receiptText(campaign, quantity, code) {
+function receiptText(campaign, quantity, code, entry = {}) {
+  const shipping = entry.fulfillment === "shipping";
+  const delivery = shipping
+    ? [`受取方法：自宅配送（送料 ${amount(entry.shipping_fee)}）`, `発送案内：${campaign.shippingNote || "製造成立後にご案内します。"}`]
+    : ["製造が決まった場合、当日は受付でこのメールをお見せください。", `受取コード：${code}`, `受取案内：${campaign.pickup}`];
   return [
     "お支払いを確認しました。",
-    "当日は受付でこのメールをお見せください。",
-    `受取コード：${code}`,
+
     `作品：${campaign.title} / ${campaign.artist}`,
     `個数：${quantity}個`,
-    `お支払い金額：${amount(campaign.price * quantity)}（税込）`,
-    `受取案内：${campaign.pickup}`,
+    `お支払い金額：${amount(campaign.price * quantity + (entry.shipping_fee || 0))}（税込）`,
+    ...delivery,
     "製造条件を満たさなかった場合は、別途返金をご案内します。",
     "touchCD",
   ].join("\n");
@@ -174,14 +177,15 @@ function receiptText(campaign, quantity, code) {
 async function deliverReceipt(env, campaign, id) {
   const db = env.DB;
   const receipt = await db.prepare(`
-    SELECT p.id, p.message, p.sent_at, r.email FROM reservations r
+    SELECT p.id, p.message, p.sent_at, r.email, r.fulfillment FROM reservations r
     JOIN payment_receipts p ON p.id = r.paid_receipt_id
     WHERE r.id = ? AND r.campaign_id = ? AND r.paid = 1
   `).bind(id, campaign.id).first();
   if (!receipt) return "unavailable";
   if (receipt.sent_at) return "sent";
   if (!mailReady(env)) return "pending";
-  const delivered = await sendMail(env, receipt.email, "【touchCD】お支払い完了・会場受取のご案内",
+  const method = receipt.fulfillment === "shipping" ? "自宅配送" : "会場受取";
+  const delivered = await sendMail(env, receipt.email, `【touchCD】お支払い完了・${method}のご案内`,
     receipt.message, `paid-receipt/${receipt.id}`);
   if (!delivered) return "pending";
   await db.prepare("UPDATE payment_receipts SET sent_at = ? WHERE id = ? AND sent_at IS NULL")
@@ -197,7 +201,21 @@ async function markPickedUp(request, db, campaign) {
   }
   const result = await db.prepare(`
     UPDATE reservations SET pickup_at = ?
-    WHERE id = ? AND campaign_id = ? AND paid = 1 AND pickup_at IS NULL
+    WHERE id = ? AND campaign_id = ? AND paid = 1 AND pickup_at IS NULL AND fulfillment = 'pickup'
   `).bind(new Date().toISOString(), form.id, campaign.id).run();
   return result.meta.changes ? json({ saved: true }) : json({ error: "受取済み、入金未確認、または予約が見つかりません。" }, 409);
+}
+
+async function markShipped(request, env, campaign) {
+  const form = await readBody(request);
+  if (!uuidLike(form?.id)) return json({ error: "予約番号をご確認ください。" }, 400);
+  const result = await env.DB.prepare(`
+    UPDATE reservations SET pickup_at = ?
+    WHERE id = ? AND campaign_id = ? AND paid = 1 AND pickup_at IS NULL AND fulfillment = 'shipping'
+      AND (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ? AND paid = 1)
+        + COALESCE((SELECT offline_paid FROM campaign_settings WHERE campaign_id = ?), 0)
+        >= COALESCE((SELECT paid_goal FROM campaign_settings WHERE campaign_id = ?), ?)
+  `).bind(new Date().toISOString(), form.id, campaign.id, campaign.id, campaign.id, campaign.id, defaults(campaign).paid_goal).run();
+  return result.meta.changes ? json({ saved: true }) :
+    json({ error: "入金済みの配送注文は、製造成立後に一度だけ発送済みを記録できます。" }, 409);
 }

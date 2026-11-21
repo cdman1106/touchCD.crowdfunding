@@ -59,7 +59,7 @@ function renderEditor(project) {
     if (["artist", "artistSlug", "slug"].includes(field)) input.readOnly = Boolean(project);
     if (!project || !Object.hasOwn(project, field)) continue;
     if (input.type === "checkbox") input.checked = project[field];
-    else if (field === "deadline") input.value = project[field].slice(0, 16);
+    else if (["deadline", "audioAt"].includes(field)) input.value = project[field]?.slice(0, 16) || "";
     else input.value = project[field];
   }
   updatePath();
@@ -80,19 +80,28 @@ function renderEntry(entry) {
   state.className = "entry-status";
   const receipt = entry.receipt_sent_at ? "支払い完了メール送信済み" :
     entry.paid_receipt_id ? "支払い完了メール未送信" : "メール未発行";
-  state.textContent = entry.pickup_at ? "受取済み" : entry.paid ? `入金済み · ${receipt}` :
+  const shipping = entry.fulfillment === "shipping";
+  state.textContent = entry.pickup_at ? (shipping ? "発送済み" : "受取済み") : entry.paid ? `入金済み · ${receipt}` :
     entry.email_verified_at ? "アドレス認証済み · 入金待ち" : "旧予約 · 入金待ち";
   li.append(info, state);
   const projectId = selected;
+  if (shipping) {
+    const delivery = document.createElement("p");
+    delivery.className = "pickup-entry-code";
+    delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · 〒${entry.postal_code} ${entry.shipping_address}`;
+    li.append(delivery);
+  }
   if (entry.paid) {
     const displayCode = document.createElement("p");
     displayCode.className = "pickup-entry-code";
     displayCode.textContent = `受取コード ${entry.pickup_code}`;
-    li.append(displayCode);
+    if (!shipping) li.append(displayCode);
     if (!entry.pickup_at) {
       const actions = document.createElement("div");
       actions.className = "entry-actions";
-      if (compactCode(pickupSearch.value) === compactCode(entry.pickup_code)) {
+      if (shipping) {
+        addEntryAction(actions, "発送済みにする", "shipped", projectId, { id: entry.id }, "発送済みとして記録しました。");
+      } else if (compactCode(pickupSearch.value) === compactCode(entry.pickup_code)) {
         addEntryAction(actions, "受取済みにする", "pickup", projectId, { id: entry.id, code: pickupSearch.value }, "受取済みにしました。");
       }
       if (entry.paid_receipt_id && !entry.receipt_sent_at) {
@@ -141,7 +150,10 @@ function renderPaymentActions(entry, projectId) {
   const form = document.createElement("form");
   form.className = "payment-link-form";
   const label = document.createElement("label");
-  label.textContent = entry.quantity > 1 ? `${entry.quantity}個分の個別決済リンク` : "個別決済リンク（必要な場合）";
+  const project = projects.find((item) => item.id === projectId);
+  const total = (project?.price || 0) * entry.quantity + entry.shipping_fee;
+  label.textContent = entry.shipping_fee > 0 || entry.quantity > 1
+    ? `個別決済リンク（総額 ¥${total.toLocaleString("ja-JP")}）` : "個別決済リンク（必要な場合）";
   const url = document.createElement("input");
   Object.assign(url, { type: "url", maxLength: 1500, value: entry.payment_url || "", placeholder: "https://" });
   label.append(url);
@@ -285,6 +297,8 @@ editor.addEventListener("submit", async (event) => {
   const body = {
     ...fields, id, price: Number(fields.price),
     deadline: fields.deadline ? fields.deadline + ":00+09:00" : "",
+    audioAt: fields.audioAt ? fields.audioAt + ":00+09:00" : "",
+    shippingFee: fields.shippingFee === "" ? null : Number(fields.shippingFee),
     reservationOpen: fields.reservationOpen === "on",
   };
   try {
@@ -370,8 +384,12 @@ function csvCell(value) {
 }
 
 $("download").addEventListener("click", () => {
-  const rows = [["予約番号", "お名前", "メール", "個数", "入金済み", "受付日時", "メール認証", "受取コード", "受取日時"],
-    ...reservations.map(({ id, name, email, quantity, paid, created_at, email_verified_at, pickup_code, pickup_at }) => [id, name, email, quantity, paid ? "はい" : "いいえ", created_at, email_verified_at, pickup_code, pickup_at])];
+  const rows = [["予約番号", "お名前", "メール", "個数", "入金済み", "受付日時", "メール認証", "受取方法", "送料", "郵便番号", "配送先住所", "受取コード", "受取・発送日時"],
+    ...reservations.map((entry) => [
+      entry.id, entry.name, entry.email, entry.quantity, entry.paid ? "はい" : "いいえ", entry.created_at, entry.email_verified_at,
+      entry.fulfillment === "shipping" ? "自宅配送" : "会場受取", entry.shipping_fee, entry.postal_code, entry.shipping_address,
+      entry.pickup_code, entry.pickup_at,
+    ])];
   const url = URL.createObjectURL(new Blob(["\uFEFF", rows.map((row) => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
