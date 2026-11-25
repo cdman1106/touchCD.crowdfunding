@@ -233,7 +233,7 @@ async function submitConsultation(request, env) {
       form?.consent !== true || form?.website !== "") {
     return json({ error: "アーティスト名・メールアドレス・送信内容・同意をご確認ください。内容が長すぎる場合は短くしてお試しください。" }, 400);
   }
-  if (!env.DB || !mailReady(env)) return json({ error: "現在、相談フォームを利用できません。相談内容をコピーして cdman@gmail.com へ直接ご連絡ください。" }, 503);
+  if (!env.DB || !mailReady(env)) return json({ error: "現在、相談フォームを利用できません。相談内容をコピーして cdman1106@gmail.com へ直接ご連絡ください。" }, 503);
   const now = Date.now();
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const [ipKey, addressKey, globalKey] = await Promise.all([
@@ -248,6 +248,6 @@ async function submitConsultation(request, env) {
   await env.DB.prepare("DELETE FROM email_rate_limits WHERE scope_key IN (SELECT scope_key FROM email_rate_limits WHERE expires_at <= ? LIMIT 50)").bind(now).run();
   const id = crypto.randomUUID();
   const body = ["touchCD 企画相談フォームからのお問い合わせ", "アーティスト名：" + artist, "返信先：" + email, "受付番号：" + id, "", "以下は相談者の入力・選択内容です。", summary].join("\n");
-  const sent = await sendMail(env, "cdman@gmail.com", "【touchCD】無料企画相談", body, "consultation/" + id, email);
+  const sent = await sendMail(env, "cdman1106@gmail.com", "【touchCD】無料企画相談", body, "consultation/" + id, email);
   return sent ? json({ sent: true }, 201) : json({ error: "メールを送信できませんでした。時間をおいてお試しください。" }, 503);
 }
