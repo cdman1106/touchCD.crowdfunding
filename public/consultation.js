@@ -27,6 +27,9 @@ $("consultationForm").addEventListener("submit", async (event) => {
   status.textContent = "相談内容を送信しています。";
   let sent = false;
   try {
+    const attachments = await window.touchCDAttachments.prepare();
+    payload.attachments = attachments;
+    status.textContent = "相談内容と添付画像を送信しています。";
     const response = await fetch("/api/consultation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const data = await response.json();
     if (!response.ok || data.sent !== true) {
@@ -36,11 +39,11 @@ $("consultationForm").addEventListener("submit", async (event) => {
     }
     sent = true;
     status.dataset.state = "success";
-    status.textContent = "無料相談を受け付けました。入力したメールアドレスへ返信します。";
+    status.textContent = "無料相談を受け付けました（添付画像："+(data.attachmentCount||0)+"枚）。入力したメールアドレスへ返信します。";
     button.textContent = "送信完了";
   } catch {
     status.dataset.state = "error";
-    status.textContent = "送信結果を確認できませんでした。時間をおいて再度お試しください。";
+    status.textContent = "画像の準備または送信に失敗しました。画像の形式・枚数・通信環境をご確認ください。";
   } finally {
     if (!sent) { button.disabled = false; button.textContent = "無料相談を送信する"; }
   }

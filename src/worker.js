@@ -70,7 +70,7 @@ async function authorized(request, env) {
   return difference === 0;
 }
 
-async function readBody(request) {
+async function readBody(request, maxBytes = 18000) {
   if (!request.headers.get("Content-Type")?.startsWith("application/json")) return null;
   const reader = request.body?.getReader();
   if (!reader) return null;
@@ -81,7 +81,7 @@ async function readBody(request) {
     const chunk = await reader.read();
     if (chunk.done) break;
     size += chunk.value.byteLength;
-    if (size > 18000) {
+    if (size > maxBytes) {
       await reader.cancel();
       return null;
     }
@@ -220,6 +220,11 @@ const mediaTypes = {
   "/consultation.css": "text/css; charset=utf-8",
   "/consultation.js": "text/javascript; charset=utf-8",
   "/mockup.js": "text/javascript; charset=utf-8",
+  "/consultation-attachments.js": "text/javascript; charset=utf-8",
+  "/touchcd-studio-front.webp": "image/webp",
+  "/touchcd-studio-back.webp": "image/webp",
+  "/touchcd-studio-open.webp": "image/webp",
+  "/touchcd-studio-both.webp": "image/webp",
   "/touchcd-jazz-front.webp": "image/webp",
   "/touchcd-jazz-back.webp": "image/webp",
   "/touchcd-jazz-open.webp": "image/webp",
@@ -237,7 +242,7 @@ function assetResponse(request, pathname, asset, status = 200) {
     headers: {
       "Content-Type": mediaTypes[pathname],
       "Cache-Control": pathname.endsWith(".webp") ? "public, max-age=3600" : "no-cache",
-      "Content-Security-Policy": "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' https: blob:; script-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
       "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
       ...(pathname === "/manage" ? { "X-Robots-Tag": "noindex, nofollow" } : {}),

@@ -27,14 +27,14 @@ function randomCode() {
   return String(random[0] % 1_000_000).padStart(6, "0");
 }
 
-async function sendMail(env, to, subject, body, idempotencyKey, replyTo = "") {
+async function sendMail(env, to, subject, body, idempotencyKey, replyTo = "", attachments = []) {
   if (!mailReady(env)) return false;
   try {
-    if (env.MAIL_PROVIDER === "gmail") return await sendGmail(env, to, subject, body, idempotencyKey, replyTo);
+    if (env.MAIL_PROVIDER === "gmail") return await sendGmail(env, to, subject, body, idempotencyKey, replyTo, attachments);
     const result = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text: body, ...(replyTo ? { reply_to: replyTo } : {}) }),
+      body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text: body, ...(replyTo ? { reply_to: replyTo } : {}), ...(attachments.length ? { attachments: attachments.map(a=>({filename:a.filename,content:a.content})) } : {}) }),
       signal: AbortSignal.timeout(6500),
     });
     if (!result.ok) console.warn("Mail provider response", result.status);
@@ -47,7 +47,7 @@ async function sendMail(env, to, subject, body, idempotencyKey, replyTo = "") {
 
 function base64Utf8(value) {
   const bytes = new TextEncoder().encode(value);
-  return btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""));
+  let binary = "";for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(binary);
 }
 
 function encodedSubject(subject) {
@@ -59,9 +59,9 @@ function encodedSubject(subject) {
   return chunks.join("\r\n ");
 }
 
-function gmailMessage(from, to, subject, body, messageKey, replyTo = "") {
+function gmailMessage(from, to, subject, body, messageKey, replyTo = "", attachments = []) {
   const [type, id] = messageKey.split("/");
-  const message = [
+  const headers = [
     `From: touchCD <${from}>`,
     `To: <${to}>`,
     ...(replyTo ? [`Reply-To: <${replyTo}>`] : []),
@@ -69,15 +69,17 @@ function gmailMessage(from, to, subject, body, messageKey, replyTo = "") {
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${type}.${id}@${from.split("@")[1]}>`,
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "Content-Transfer-Encoding: base64",
-    "",
-    ...base64Utf8(body).match(/.{1,76}/g),
-  ].join("\r\n");
+  ];
+  const wrap = value => (value.match(/.{1,76}/g)||[]).join("\r\n");
+  const plain = ["Content-Type: text/plain; charset=UTF-8","Content-Transfer-Encoding: base64","",wrap(base64Utf8(body))].join("\r\n");
+  const boundary = "touchCD-"+id;
+  const message = attachments.length
+    ? [...headers,'Content-Type: multipart/mixed; boundary="'+boundary+'"',"","--"+boundary,plain,...attachments.flatMap(a=>["--"+boundary,'Content-Type: image/jpeg; name="'+a.filename+'"',"Content-Transfer-Encoding: base64",'Content-Disposition: attachment; filename="'+a.filename+'"',"",wrap(a.content)]),"--"+boundary+"--",""].join("\r\n")
+    : [...headers,plain].join("\r\n");
   return base64Utf8(message).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
-async function sendGmail(env, to, subject, body, messageKey, replyTo = "") {
+async function sendGmail(env, to, subject, body, messageKey, replyTo = "", attachments = []) {
   const token = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     body: new URLSearchParams({
@@ -98,7 +100,7 @@ async function sendGmail(env, to, subject, body, messageKey, replyTo = "") {
   const result = await fetch(`https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(from)}/messages/send`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ raw: gmailMessage(from, to, subject, body, messageKey, replyTo) }),
+    body: JSON.stringify({ raw: gmailMessage(from, to, subject, body, messageKey, replyTo, attachments) }),
     signal: AbortSignal.timeout(6500),
   });
   if (!result.ok) console.warn("Gmail send response", result.status);
@@ -223,7 +225,7 @@ async function markShipped(request, env, campaign) {
 
 
 async function submitConsultation(request, env) {
-  const form = await readBody(request);
+  const form = await readBody(request, 5800000);
   const artist = typeof form?.artist === "string" ? form.artist.trim() : "";
   const email = asEmail(form?.email);
   const summary = typeof form?.summary === "string" ? form.summary.trim() : "";
@@ -233,6 +235,8 @@ async function submitConsultation(request, env) {
       form?.consent !== true || form?.website !== "") {
     return json({ error: "アーティスト名・メールアドレス・送信内容・同意をご確認ください。内容が長すぎる場合は短くしてお試しください。" }, 400);
   }
+  const attachments = form.attachments ?? [];
+  if (!Array.isArray(attachments) || attachments.length > 8 || attachments.some(a => !a || typeof a.filename !== "string" || !/^(?:jacket|disc|back|inner|reference-[1-8]|touchCD-preview)\.jpg$/.test(a.filename) || typeof a.content !== "string" || a.content.length > 670000 || !/^\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(a.content) || a.content.length % 4 !== 0) || new Set(attachments.map(a=>a.filename)).size!==attachments.length || attachments.reduce((n,a)=>n+a.content.length,0)>5600000) return json({error:"添付画像の形式・枚数・サイズをご確認ください。"},400);
   if (!env.DB || !mailReady(env)) return json({ error: "現在、相談フォームを利用できません。相談内容をコピーして cdman1106@gmail.com へ直接ご連絡ください。" }, 503);
   const now = Date.now();
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
@@ -247,7 +251,7 @@ async function submitConsultation(request, env) {
   }
   await env.DB.prepare("DELETE FROM email_rate_limits WHERE scope_key IN (SELECT scope_key FROM email_rate_limits WHERE expires_at <= ? LIMIT 50)").bind(now).run();
   const id = crypto.randomUUID();
-  const body = ["touchCD 企画相談フォームからのお問い合わせ", "アーティスト名：" + artist, "返信先：" + email, "受付番号：" + id, "", "以下は相談者の入力・選択内容です。", summary].join("\n");
-  const sent = await sendMail(env, "cdman1106@gmail.com", "【touchCD】無料企画相談", body, "consultation/" + id, email);
-  return sent ? json({ sent: true }, 201) : json({ error: "メールを送信できませんでした。時間をおいてお試しください。" }, 503);
+  const body = ["touchCD 企画相談フォームからのお問い合わせ", "アーティスト名：" + artist, "返信先：" + email, "受付番号：" + id, "", "以下は相談者の入力・選択内容です。", "添付画像："+attachments.length+"枚",summary].join("\n");
+  const sent = await sendMail(env, "cdman1106@gmail.com", "【touchCD】無料企画相談", body, "consultation/" + id, email, attachments);
+  return sent ? json({ sent: true, attachmentCount: attachments.length }, 201) : json({ error: "メールを送信できませんでした。時間をおいてお試しください。" }, 503);
 }
