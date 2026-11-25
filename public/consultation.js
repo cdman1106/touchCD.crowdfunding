@@ -14,3 +14,9 @@ $('quiz').addEventListener('change',e=>{if(e.target.name==='social')syncUrls();d
 
 const presets={music:{music:['file','links'],content:['cover','video'],stream:['spotify','apple']},memory:{content:['cover'],story:['photo','letter','setlist']},follow:{social:['instagram','x'],external:['ticket'],future:['calendar','featured']}};
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{Object.entries(presets[b.dataset.preset]).forEach(([k,vs])=>vs.forEach(v=>{const el=document.querySelector(`input[name="${k}"][value="${v}"]`);if(el)el.checked=true}));syncUrls();diagnose();$('summary').value='';set('presetStatus','選択例を追加しました。使っていないSNSや素材がない項目は解除できます。')}));
+
+$("emailConsultation").addEventListener("click", function () {
+  $("makeSummary").click();
+  const subject = "touchCD 無料企画相談";
+  this.href = "mailto:cdman@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent($("summary").value.replace(/\r?\n/g, "\r\n"));
+});
