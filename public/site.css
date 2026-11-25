@@ -207,3 +207,49 @@ body:has(.fan-home) .header-cta{border-radius:24px;border-color:#be2448;padding:
 .fan-artist{display:grid;grid-template-columns:1fr auto;gap:25px;align-items:center}.fan-artist .fan-kicker{color:#a5002b}.fan-artist p:not(.fan-kicker){font-size:14px;margin-top:10px}.fan-artist-actions{display:flex;flex-direction:column;gap:10px}.fan-text-link{font-size:13px;color:#a5002b;text-align:center;font-weight:800;text-decoration:underline}.fan-faq h2{margin-bottom:14px}.fan-faq .faq{border:1px solid #513c50;border-radius:9px;padding:13px 14px;margin-bottom:8px;background:#1b1622}.fan-faq .faq p{padding-top:8px}
 @media(max-width:700px){.fan-hero{display:flex;flex-direction:column;align-items:stretch;gap:15px;padding:28px 0 6px}.fan-hero h1{font-size:clamp(49px,12vw,70px);margin-bottom:14px}.fan-copy p{font-size:14px}.fan-hero-art{width:100%;border-radius:12px}.fan-actions{gap:8px}.fan-actions a{flex:1;min-width:0;min-height:48px;font-size:13px;padding-inline:10px}.fan-actions p{text-align:center}.fan-home>.section-shell{margin-block:18px}.fan-silver{padding:15px!important;border-radius:15px}.fan-empty{padding:18px 12px;gap:12px}.fan-record{width:48px;height:48px}.fan-record:after{inset:17px}.fan-empty p{font-size:12px}.fan-how{gap:6px}.fan-how article>div:last-child{padding:9px 6px}.fan-how h3{font-size:13px;line-height:1.35}.fan-how p{font-size:11px;line-height:1.55}.fan-symbol svg{width:44px;height:44px}.fan-symbol span{font-size:8px;letter-spacing:.04em}.fan-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.fan-steps li{padding:12px}.fan-steps h3{font-size:14px}.fan-music{grid-template-columns:1fr;padding:19px 15px;gap:20px}.fan-device iframe{height:440px;max-height:65vh}.fan-real-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.fan-artist{grid-template-columns:1fr;gap:15px}.fan-artist-actions .primary{width:100%}.fan-home h2{font-size:25px}.fan-about,.fan-gallery,.fan-faq{padding:9px 0}.fan-silver .section-head>span{font-size:11px}.fan-silver .section-head strong{font-size:18px}}
 @media(max-width:340px){.fan-how{grid-template-columns:1fr}.fan-how article>img,.fan-symbol{aspect-ratio:2/1}.fan-actions{flex-direction:column}}
+
+/* Reservation funding explanation — consistent on both public pages */
+.reservation-explain{scroll-margin-top:86px}
+.reservation-explain .reservation-intro{font-size:15px;line-height:1.85;max-width:65em}
+.reservation-explain-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;list-style:none;margin:22px 0;padding:0}
+.reservation-explain-steps li{min-width:0;padding:16px 13px;border:1px solid #d6cdd3;background:#fff;border-radius:11px;color:#211922}
+.reservation-step-mark{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;color:#b90030}
+.reservation-step-mark span{font-weight:900;font-size:21px;line-height:1}
+.reservation-step-mark svg{width:34px;height:34px;flex:none}
+.reservation-explain-steps h3{font-size:16px;line-height:1.45;margin:0 0 7px}
+.reservation-explain-steps p{font-size:13px;line-height:1.7;margin:0;color:#524751}
+.reservation-example{background:radial-gradient(ellipse at 100% 100%,#4a142e,transparent 75%),#201824;color:#fff;border:1px solid #a25770;border-radius:15px;margin:20px 0;padding:22px}
+.reservation-example-kicker{font-size:12px;letter-spacing:.06em;font-weight:800;color:#ff9fb4;margin:0 0 5px}
+.reservation-example h3{font-size:clamp(19px,2.5vw,26px);line-height:1.4;margin:0 0 8px;color:#fff}
+.reservation-example-intro{font-size:13px;color:#e6dce5;margin:0}
+.reservation-example-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;list-style:none;padding:0;margin:18px 0 20px}
+.reservation-example-flow li{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:122px;background:#fff;color:#221a23;border:1px solid #d9c4ce;border-radius:10px;padding:12px 7px;text-align:center}
+.reservation-example-flow li:not(:last-child)::after{content:"→";position:absolute;right:-19px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:900;color:#ff9fb4}
+.reservation-node-label{font-size:12px;font-weight:800;line-height:1.4}
+.reservation-number{display:block;font-size:clamp(34px,4vw,48px);letter-spacing:-.04em;font-weight:900;line-height:1.15;color:#bc0030;font-variant-numeric:tabular-nums}
+.reservation-number small{font-size:15px;margin-left:3px;color:inherit}
+.reservation-node-caption{font-size:11px;color:#5b4e59;line-height:1.45}
+.reservation-mail{width:44px;height:44px;color:#bc0030}
+.reservation-example-flow .production-node{background:#b90030;border-color:#ff8aa5;color:#fff}
+.reservation-example-flow .production-node .reservation-number,.reservation-example-flow .production-node .reservation-node-caption{color:#fff}
+.reservation-example-message{border-top:1px solid #765063;padding-top:15px}
+.reservation-example-message strong{display:block;font-size:16px;color:#ffd5de;line-height:1.5}
+.reservation-example-message p{font-size:14px;color:#f3e7ef;margin:7px 0 0;line-height:1.75}
+.reservation-example-note{font-size:11px;color:#e1d1df;margin:12px 0 0;line-height:1.7}
+@media(max-width:720px){
+.reservation-explain-steps{grid-template-columns:1fr;gap:8px;margin:16px 0}
+.reservation-explain-steps li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;padding:12px}
+.reservation-step-mark{flex-direction:column;justify-content:flex-start;gap:6px;margin:0;padding-top:2px}
+.reservation-step-mark svg{width:28px;height:28px}
+.reservation-explain-steps h3{font-size:15px;margin-bottom:4px}
+.reservation-explain-steps p{font-size:13px}
+.reservation-example{padding:16px 13px;margin:16px 0}
+.reservation-example-flow{grid-template-columns:1fr;gap:24px;margin:16px 0}
+.reservation-example-flow li{min-height:84px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:4px 12px;padding:12px 14px;text-align:left;align-items:center;justify-items:start}
+.reservation-example-flow li:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-24px;left:50%;transform:translateX(-50%);line-height:24px}
+.reservation-node-label{font-size:13px;grid-column:1;grid-row:1}
+.reservation-number,.reservation-mail{grid-column:2;grid-row:1/span 2;justify-self:end}
+.reservation-number{font-size:36px;white-space:nowrap}
+.reservation-node-caption{grid-column:1;grid-row:2;font-size:12px}
+.reservation-example-message strong{font-size:15px}
+}
