@@ -236,7 +236,7 @@ async function submitConsultation(request, env) {
     return json({ error: "アーティスト名・メールアドレス・送信内容・同意をご確認ください。内容が長すぎる場合は短くしてお試しください。" }, 400);
   }
   const attachments = form.attachments ?? [];
-  if (!Array.isArray(attachments) || attachments.length > 8 || attachments.some(a => !a || typeof a.filename !== "string" || !/^(?:jacket|disc|back|inner|reference-[1-8]|touchCD-preview)\.jpg$/.test(a.filename) || typeof a.content !== "string" || a.content.length > 670000 || !/^\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(a.content) || a.content.length % 4 !== 0) || new Set(attachments.map(a=>a.filename)).size!==attachments.length || attachments.reduce((n,a)=>n+a.content.length,0)>5600000) return json({error:"添付画像の形式・枚数・サイズをご確認ください。"},400);
+  if (!Array.isArray(attachments) || attachments.length > 8 || attachments.some(a => !a || typeof a.filename !== "string" || !/^(?:jacket|disc|back|inner|tray|reference-[1-8]|touchCD-preview)\.jpg$/.test(a.filename) || typeof a.content !== "string" || a.content.length > 670000 || !/^\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(a.content) || a.content.length % 4 !== 0) || new Set(attachments.map(a=>a.filename)).size!==attachments.length || attachments.reduce((n,a)=>n+a.content.length,0)>5600000) return json({error:"添付画像の形式・枚数・サイズをご確認ください。"},400);
   if (!env.DB || !mailReady(env)) return json({ error: "現在、相談フォームを利用できません。相談内容をコピーして cdman1106@gmail.com へ直接ご連絡ください。" }, 503);
   const now = Date.now();
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";

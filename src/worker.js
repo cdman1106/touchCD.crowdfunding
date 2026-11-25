@@ -222,6 +222,8 @@ const mediaTypes = {
   "/mockup.js": "text/javascript; charset=utf-8",
   "/consultation-attachments.js": "text/javascript; charset=utf-8",
   "/touchcd-studio-front.webp": "image/webp",
+  "/touchcd-studio-removed.webp": "image/webp",
+  "/touchcd-music-site-example.webp": "image/webp",
   "/touchcd-studio-back.webp": "image/webp",
   "/touchcd-studio-open.webp": "image/webp",
   "/touchcd-studio-both.webp": "image/webp",

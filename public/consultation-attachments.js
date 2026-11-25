@@ -46,7 +46,7 @@
   window.touchCDAttachments={prepare:async()=>{
     await window.touchCDDesigns?.wait();if(count()>8)throw Error("添付画像を8枚以内にしてください。");
     const snapshot=[...entries(),...extras],out=[];
-    const roles={jacket:"jacket",disc:"disc",back:"back",inner:"inner"};
+    const roles={jacket:"jacket",disc:"disc",back:"back",inner:"inner",tray:"tray"};
     for(let i=0;i<snapshot.length;i++){
       const item=snapshot[i],blob=await compress(item.file);
       out.push({filename:(roles[item.key]||"reference-"+(i+1))+".jpg",content:await base64(blob)});

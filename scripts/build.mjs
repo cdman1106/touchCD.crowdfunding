@@ -12,6 +12,8 @@ const paths = {
   "/mockup.js": "mockup.js",
   "/consultation-attachments.js": "consultation-attachments.js",
   "/touchcd-studio-front.webp": "touchcd-studio-front.webp",
+  "/touchcd-studio-removed.webp": "touchcd-studio-removed.webp",
+  "/touchcd-music-site-example.webp": "touchcd-music-site-example.webp",
   "/touchcd-studio-back.webp": "touchcd-studio-back.webp",
   "/touchcd-studio-open.webp": "touchcd-studio-open.webp",
   "/touchcd-studio-both.webp": "touchcd-studio-both.webp",
