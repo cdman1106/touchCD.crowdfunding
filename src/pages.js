@@ -106,7 +106,7 @@ function home(request, data) {
     </section>
     <section id="releases" class="section-shell releases"><div class="section-head"><h2>作品一覧</h2><span>${releases.length}作品</span></div>
     <div class="release-grid">${releases.map(card).join("")}</div></section>
-    <section class="guide section-shell" id="artist-consultation"><div class="section-head"><h2>アーティストの方へ</h2></div><p>一緒にグッズ・イベントを企画しませんか？新曲・ライブ・周年記念を、音楽やSNSにつながるミニCDに。標準の予約販売なら制作費の前払いは不要です。</p><p>質問に答えるだけで、専用ページの内容や販売方法、手取りの目安を確認できます。企画がまだ決まっていなくても無料で相談できます。</p><a class="primary hero-button" href="/consultation">一緒にグッズ・イベントを企画する <span aria-hidden="true">↗</span></a></section>
+    <section class="guide section-shell" id="artist-consultation"><div class="section-head"><h2>アーティストの方へ</h2></div><p>一緒にグッズ・イベントを企画しませんか？新曲・ライブ・周年記念を、音楽やSNSにつながるミニCDに。標準の予約販売なら制作費の前払いは不要です。</p><p>制作費の前払い不要（標準予約販売）。まずは取り分やグッズの使い方を確認し、企画が決まっていなくても無料で相談できます。</p><a class="primary hero-button" href="/consultation">一緒にグッズ・イベントを企画する <span aria-hidden="true">↗</span></a></section>
     ${guide()}
   </main>`);
 }
