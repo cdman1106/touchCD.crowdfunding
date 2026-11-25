@@ -15,8 +15,33 @@ $('quiz').addEventListener('change',e=>{if(e.target.name==='social')syncUrls();d
 const presets={music:{music:['file','links'],content:['cover','video'],stream:['spotify','apple']},memory:{content:['cover'],story:['photo','letter','setlist']},follow:{social:['instagram','x'],external:['ticket'],future:['calendar','featured']}};
 document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{Object.entries(presets[b.dataset.preset]).forEach(([k,vs])=>vs.forEach(v=>{const el=document.querySelector(`input[name="${k}"][value="${v}"]`);if(el)el.checked=true}));syncUrls();diagnose();$('summary').value='';set('presetStatus','選択例を追加しました。使っていないSNSや素材がない項目は解除できます。')}));
 
-$("emailConsultation").addEventListener("click", function () {
+$("consultationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget, button = $("emailConsultation"), status = $("consultationStatus");
+  if (button.disabled || !form.reportValidity()) return;
   $("makeSummary").click();
-  const subject = "touchCD 無料企画相談";
-  this.href = "mailto:cdman@gmail.com?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent($("summary").value.replace(/\r?\n/g, "\r\n"));
+  const payload = { artist: $("artist").value.trim(), email: $("reply").value.trim(), summary: $("summary").value, consent: $("consultationConsent").checked, website: $("consultationWebsite").value };
+  button.disabled = true;
+  button.textContent = "送信中…";
+  status.dataset.state = "pending";
+  status.textContent = "相談内容を送信しています。";
+  let sent = false;
+  try {
+    const response = await fetch("/api/consultation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const data = await response.json();
+    if (!response.ok || data.sent !== true) {
+      status.dataset.state = "error";
+      status.textContent = data.error || "送信できませんでした。時間をおいて再度お試しください。";
+      return;
+    }
+    sent = true;
+    status.dataset.state = "success";
+    status.textContent = "無料相談を受け付けました。入力したメールアドレスへ返信します。";
+    button.textContent = "送信完了";
+  } catch {
+    status.dataset.state = "error";
+    status.textContent = "送信結果を確認できませんでした。時間をおいて再度お試しください。";
+  } finally {
+    if (!sent) { button.disabled = false; button.textContent = "無料相談を送信する"; }
+  }
 });

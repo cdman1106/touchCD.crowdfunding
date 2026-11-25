@@ -27,14 +27,14 @@ function randomCode() {
   return String(random[0] % 1_000_000).padStart(6, "0");
 }
 
-async function sendMail(env, to, subject, body, idempotencyKey) {
+async function sendMail(env, to, subject, body, idempotencyKey, replyTo = "") {
   if (!mailReady(env)) return false;
   try {
-    if (env.MAIL_PROVIDER === "gmail") return await sendGmail(env, to, subject, body, idempotencyKey);
+    if (env.MAIL_PROVIDER === "gmail") return await sendGmail(env, to, subject, body, idempotencyKey, replyTo);
     const result = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text: body }),
+      body: JSON.stringify({ from: env.MAIL_FROM, to: [to], subject, text: body, ...(replyTo ? { reply_to: replyTo } : {}) }),
       signal: AbortSignal.timeout(6500),
     });
     if (!result.ok) console.warn("Mail provider response", result.status);
@@ -59,11 +59,12 @@ function encodedSubject(subject) {
   return chunks.join("\r\n ");
 }
 
-function gmailMessage(from, to, subject, body, messageKey) {
+function gmailMessage(from, to, subject, body, messageKey, replyTo = "") {
   const [type, id] = messageKey.split("/");
   const message = [
     `From: touchCD <${from}>`,
     `To: <${to}>`,
+    ...(replyTo ? [`Reply-To: <${replyTo}>`] : []),
     `Subject: ${encodedSubject(subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${type}.${id}@${from.split("@")[1]}>`,
@@ -76,7 +77,7 @@ function gmailMessage(from, to, subject, body, messageKey) {
   return base64Utf8(message).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
-async function sendGmail(env, to, subject, body, messageKey) {
+async function sendGmail(env, to, subject, body, messageKey, replyTo = "") {
   const token = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     body: new URLSearchParams({
@@ -97,7 +98,7 @@ async function sendGmail(env, to, subject, body, messageKey) {
   const result = await fetch(`https://gmail.googleapis.com/gmail/v1/users/${encodeURIComponent(from)}/messages/send`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ raw: gmailMessage(from, to, subject, body, messageKey) }),
+    body: JSON.stringify({ raw: gmailMessage(from, to, subject, body, messageKey, replyTo) }),
     signal: AbortSignal.timeout(6500),
   });
   if (!result.ok) console.warn("Gmail send response", result.status);
@@ -218,4 +219,35 @@ async function markShipped(request, env, campaign) {
   `).bind(new Date().toISOString(), form.id, campaign.id, campaign.id, campaign.id, campaign.id, defaults(campaign).paid_goal).run();
   return result.meta.changes ? json({ saved: true }) :
     json({ error: "入金済みの配送注文は、製造成立後に一度だけ発送済みを記録できます。" }, 409);
+}
+
+
+async function submitConsultation(request, env) {
+  const form = await readBody(request);
+  const artist = typeof form?.artist === "string" ? form.artist.trim() : "";
+  const email = asEmail(form?.email);
+  const summary = typeof form?.summary === "string" ? form.summary.trim() : "";
+  const safeReply = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test(email) && !email.includes("..");
+  if (!artist || artist.length > 80 || /[\x00-\x1f\x7f]/.test(artist) ||
+      !validEmail(email) || !safeReply || !summary || summary.length > 12000 ||
+      form?.consent !== true || form?.website !== "") {
+    return json({ error: "アーティスト名・メールアドレス・送信内容・同意をご確認ください。内容が長すぎる場合は短くしてお試しください。" }, 400);
+  }
+  if (!env.DB || !mailReady(env)) return json({ error: "現在、相談フォームを利用できません。相談内容をコピーして cdman@gmail.com へ直接ご連絡ください。" }, 503);
+  const now = Date.now();
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const [ipKey, addressKey, globalKey] = await Promise.all([
+    emailDigest(env, ["consultation", "ip", ip]),
+    emailDigest(env, ["consultation", "email", email]),
+    emailDigest(env, ["consultation", "global"]),
+  ]);
+  for (const [key, window, limit] of [[ipKey, 15 * 60_000, 5], [addressKey, 60 * 60_000, 3], [globalKey, 24 * 60 * 60_000, 80]]) {
+    const result = await throttle(env.DB, key, now, window, limit).run();
+    if (!result.meta.changes) return json({ error: "送信回数が上限に達しました。時間をおいてお試しください。" }, 429);
+  }
+  await env.DB.prepare("DELETE FROM email_rate_limits WHERE scope_key IN (SELECT scope_key FROM email_rate_limits WHERE expires_at <= ? LIMIT 50)").bind(now).run();
+  const id = crypto.randomUUID();
+  const body = ["touchCD 企画相談フォームからのお問い合わせ", "アーティスト名：" + artist, "返信先：" + email, "受付番号：" + id, "", "以下は相談者の入力・選択内容です。", summary].join("\n");
+  const sent = await sendMail(env, "cdman@gmail.com", "【touchCD】無料企画相談", body, "consultation/" + id, email);
+  return sent ? json({ sent: true }, 201) : json({ error: "メールを送信できませんでした。時間をおいてお試しください。" }, 503);
 }

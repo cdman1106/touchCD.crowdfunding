@@ -8,3 +8,5 @@
 [data-guide-style="guide-inline-3"]{margin-top:18px}
 [data-guide-style="guide-inline-4"]{margin-top:26px}
 [data-guide-style="guide-inline-5"]{min-height:180px}
+
+.consultation-trap{display:none}.consultation-consent{display:flex;align-items:flex-start;gap:8px;margin-block:16px}.consultation-consent input{flex:none;margin-top:6px}#emailConsultation:disabled{opacity:.65;cursor:default}#consultationStatus{font-weight:700;overflow-wrap:anywhere}#consultationStatus[data-state=error]{color:#a42620}#consultationStatus[data-state=success]{color:#326329}

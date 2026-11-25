@@ -265,6 +265,7 @@ async function handleRequest(request, env) {
   }
   if (!pathname.startsWith("/api/")) return assetResponse(request, "/", notFound(request), 404);
   if (request.method !== "GET" && request.headers.get("Origin") !== origin) return json({ error: "操作を確認できません。" }, 403);
+  if (pathname === "/api/consultation" && request.method === "POST") return submitConsultation(request, env);
   const artist = url.searchParams.get("artist");
   const project = url.searchParams.get("project");
   const id = url.searchParams.get("id");
