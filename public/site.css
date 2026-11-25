@@ -253,3 +253,27 @@ body:has(.fan-home) .header-cta{border-radius:24px;border-color:#be2448;padding:
 .reservation-node-caption{grid-column:1;grid-row:2;font-size:12px}
 .reservation-example-message strong{font-size:15px}
 }
+
+/* Reservation explanation: two distinct examples and audience-specific benefits. */
+.reservation-label{font-weight:800;color:#ac002d;font-size:13px;margin-bottom:8px}
+.reservation-minimum{background:#fff;border:1px solid #dac4ce;border-left:4px solid #bd0030;border-radius:9px;padding:16px;margin:20px 0;color:#241b25}
+.reservation-minimum strong{font-size:17px;line-height:1.55;display:block}
+.reservation-minimum p{font-size:14px;line-height:1.8;margin:7px 0 0}
+.reservation-explain-steps{gap:20px}
+.reservation-explain-steps li{position:relative}
+.reservation-explain-steps li:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-18px;transform:translateY(-50%);font-size:18px;font-weight:900;color:#bd0030}
+.reservation-outcome{font-size:14px;font-weight:750;color:#fff;text-align:center;line-height:1.55;margin:0 0 12px}
+.reservation-outcome span{display:block;color:#ff9fb4;font-size:20px}
+.reservation-common-note{font-size:12px;color:var(--muted);line-height:1.65;margin:0 0 20px}
+.fan-silver .reservation-common-note{color:#5a505b}
+.reservation-benefits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:22px 0}
+.reservation-benefit{background:#fff;border:1px solid #d9cbd3;border-radius:11px;padding:18px;color:#211922}
+.reservation-benefit h3{font-size:17px;line-height:1.45;margin:0 0 11px;color:#a5002b}
+.reservation-benefit ul{list-style:none;margin:0;padding:0}
+.reservation-benefit li{position:relative;padding:5px 0 5px 23px;font-size:13px;line-height:1.65}
+.reservation-benefit li:before{content:"✓";position:absolute;left:0;top:5px;color:#b90030;font-weight:900}
+.reservation-refund{background:#f9e5eb;border-left:4px solid #bd0030;border-radius:8px;padding:13px 15px;color:#422531;margin:18px 0}
+.reservation-refund strong{font-size:15px;color:#a5002b}
+.reservation-refund p{font-size:13px;line-height:1.7;margin:4px 0 0}
+.reservation-cta{margin-top:12px}
+@media(max-width:720px){.reservation-explain-steps{gap:23px}.reservation-explain-steps li:not(:last-child)::after{content:"↓";top:auto;right:auto;bottom:-23px;left:50%;transform:translateX(-50%);line-height:23px}.reservation-benefits{grid-template-columns:1fr;gap:8px}.reservation-benefit{padding:13px}.reservation-minimum{padding:12px}.reservation-minimum strong{font-size:15px}.reservation-minimum p{font-size:13px}.reservation-cta{width:100%;text-align:center;justify-content:center}.reservation-example h3{font-size:19px}}
