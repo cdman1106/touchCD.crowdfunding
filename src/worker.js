@@ -244,7 +244,7 @@ function assetResponse(request, pathname, asset, status = 200) {
     headers: {
       "Content-Type": mediaTypes[pathname],
       "Cache-Control": pathname.endsWith(".webp") ? "public, max-age=3600" : "no-cache",
-      "Content-Security-Policy": "default-src 'self'; img-src 'self' https: blob:; script-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; frame-src " + (pathname === "/consultation" ? "https://ippuku-event.cdman1106.workers.dev" : "'none'"),
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' https: blob:; script-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; frame-src " + (pathname === "/consultation" || (pathname === "/" && new URL(request.url).pathname === "/") ? "https://ippuku-event.cdman1106.workers.dev" : "'none'"),
       "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
       ...(pathname === "/manage" ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
