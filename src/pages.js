@@ -287,12 +287,210 @@ function izumiStoryPage(request, kind) {
   const artist=kind==="artist";
   const title=artist?"和田いづみ — 音楽の歩み":"A Jazz Date with Izumi — touchCD制作ストーリー";
   const headline=artist?"一つの歌声が、<br>海を越えて。":"音楽の余韻を、<br>手のひらに。";
-  const lead=artist?"ジャズとの出会いから、海を越えた録音、そして福岡のステージへ。和田いづみさんの音楽を、これまでの歩みからたどります。":"ライブの時間が終わっても、音楽と出会った記憶は残る。そんな記憶を日常に持ち帰るための、小さな音楽グッズについて。";
+  const lead=artist?"2002年、カフェで出会ったジャズ。ニューヨークで出会った音楽仲間、北欧での録音、そして九州の街や自然の中へ。本人の言葉と当時の記録をたどり、和田いづみさんの24年にわたる音楽の歩みを紹介します。":"ライブの時間が終わっても、音楽と出会った記憶は残る。そんな記憶を日常に持ち帰るための、小さな音楽グッズについて。";
   const chapters=artist?[
-    {no:"01",label:"2002 / THE BEGINNING",h:"一つの生演奏から始まった音楽の道",body:["2002年、和田いづみさんはバーテンダーとして働いていたカフェで、ピアニスト・森山輝生さんの演奏に出会いました。そこでジャズボーカルの魅力を知り、音楽に深く取り組むようになります。","ジャズには、譜面だけでは伝えきれない、その場の空気や演奏者同士のやりとりがあります。歌声が楽器の音と重なり、同じ曲にもその日だけの表情が生まれる。和田さんの音楽を知るうえで、この生演奏との出会いは大切な原点です。"]},
-    {no:"02",label:"2004 / NEW YORK",h:"ニューヨークで広がった音楽の世界",body:["2004年にはニューヨークへ。ギタリストの森山修さんと出会い、二人で作ったオリジナル曲やジャズのスタンダードを録音しました。","その音楽はインディーズの楽曲紹介サイトNEXT MUSIC Japanでも反響を呼び、有線放送のCafe Apres-midiで選曲されました。ライブの場所を離れても歌が人に届いていく。和田さんの活動が広がっていった時期です。"]},
-    {no:"03",label:"2008–2010 / SWEDEN & FIRST ALBUM",h:"海を越えた録音が、一枚の作品になるまで",body:["2008年には森泰人さんらとスウェーデンで録音。その音源は2009年、初のアルバム『Just The Two Of Us』として発表され、2010年に全国流通となりました。","アルバムにはジャズやボサノヴァだけでなく、スティーヴィー・ワンダーやエルトン・ジョンの楽曲も取り上げられています。ホールの舞台で演奏者が輪になって録音した作品です。ジャンルの境界を越えて楽曲を届ける姿勢や、生演奏の響きを大切にした録音に、音楽を知る手がかりがあります。"]},
-    {no:"04",label:"FUKUOKA / LIVE",h:"今も、生演奏のある場所で",body:["2010年にはポップユニット『天国』にもボーカルとして参加。ジャズ以外の音楽にも活動の場を広げています。2026年7月8日には福岡のMusic Bar Bridgeで、ギタリスト石川雄一さんとの公演が案内されました。","初めて和田さんを知った方には、まず歌声そのものに触れていただきたいと思います。すでにライブに足を運んでいる方には、これまでの音楽の歩みを知ることで、また違った聴き方が生まれるかもしれません。活動を知り、音楽を聴き、次の演奏に足を運ぶ。その一つひとつが、アーティストの音楽を身近に感じるきっかけになります。"]}
+  {
+    "no": "01",
+    "label": "2002 / THE BEGINNING",
+    "h": "一杯の飲み物を届ける場所で、歌と出会った",
+    "body": [
+      "和田いづみさんのジャズへの歩みは、2002年にさかのぼります。当時、カフェでバーテンダーとして働いていた彼女は、ジャズピアニストの森山輝生さんの演奏に出会いました。そこからジャズボーカルに打ち込むようになったと、公演会場のプロフィールに記されています。",
+      "音楽を聴くことを目的に足を運んだ場所ではなく、日々の仕事の中で出会った生演奏。それが、その後の活動につながる出発点でした。カフェという日常に近い場所で音楽に出会ったことは、のちに各地のカフェや飲食店でも歌を届ける和田さんの歩みと重なります。これは編集部が公開記録を読み解く中で見いだしたつながりです。"
+    ],
+    "refs": [
+      [
+        "Music Bar Bridge・公演プロフィール",
+        "https://bridge-josui.com/event/k_9wzq8s9_3"
+      ]
+    ]
+  },
+  {
+    "no": "02",
+    "label": "2004 / NEW YORK",
+    "h": "ニューヨークで生まれた、海を越える音楽の縁",
+    "body": [
+      "ジャズに出会ってから2年後の2004年、和田さんはニューヨークへ渡ります。そこで知り合ったギタリストが森山修さんでした。二人は共作曲とジャズのスタンダードを録音し、歌を演奏会場の外へ届ける活動にも踏み出します。",
+      "Music Bar Bridgeの紹介によれば、NEXT MUSIC Japanで新人の週間ダウンロードランキング1位となり、その後もおよそ1カ月にわたって上位10位以内に入りました。また、USENのCafe Apres-midiチャンネルで取り上げられ、全国に歌声が届けられました。ランキングの当時の原資料は未確認ですが、公演プロフィールに残る実績です。",
+      "森山修さんとの縁は、その場限りではありませんでした。後年の本人のブログにも二人の共演が記されています。ニューヨークで始まった音楽仲間とのつながりが、時を経て九州でのステージへと続いていきます。"
+    ],
+    "refs": [
+      [
+        "Music Bar Bridge・公演プロフィール",
+        "https://bridge-josui.com/event/k_9wzq8s9_3"
+      ],
+      [
+        "本人ブログ・2022年8月の演奏予定",
+        "https://ameblo.jp/izumiwada/entry-12756795302.html"
+      ]
+    ]
+  },
+  {
+    "no": "03",
+    "label": "2008–2009 / SWEDEN",
+    "h": "北欧の演奏家とつくった、初めてのアルバム",
+    "body": [
+      "2008年11月2日と3日、和田さんはスウェーデンで初アルバムにつながる録音を行いました。2009年5月に掲載された後藤誠氏のアルバム評には、ベーシスト森泰人さんのプロデュースと、ピアノのSimon Westman、サックスやフルートのJohan Borgström、ドラム・パーカッションのSebastiaan Kapteinとの共演が記録されています。",
+      "録音はホールの舞台で奏者が輪をつくる形で行われたと、公演プロフィールは伝えています。歌だけが独立するのではなく、演奏家たちの音が一つの場をつくる。聴く側も、歌と楽器の距離や、演奏の呼吸を意識して楽しみたくなる録音です。",
+      "この録音から生まれた『Just The Two Of Us』は2009年に発表されました。当時のレビューでは3月1日発売と紹介され、翌2010年4月14日の全国流通盤はオリコンの商品情報にも掲載されています。"
+    ],
+    "refs": [
+      [
+        "後藤誠のJAZZ研究室・2009年5月のアルバム評",
+        "https://rifftide.exblog.jp/8246153/"
+      ],
+      [
+        "森泰人公式サイト・ディスコグラフィー",
+        "https://morimusic.net/"
+      ],
+      [
+        "ORICON NEWS・アルバム情報",
+        "https://www.oricon.co.jp/prof/508163/products/867317/1/"
+      ]
+    ]
+  },
+  {
+    "no": "04",
+    "label": "2009–2010 / DISCOGRAPHY",
+    "h": "ジャズだけにとどまらない、八つの歌",
+    "body": [
+      "『Just The Two Of Us』の選曲には、和田さんの音楽を知るための手がかりが詰まっています。エルトン・ジョンの「Your Song」、スティーヴィー・ワンダーの「Part-Time Lover」と「Golden Lady」、ボサノヴァの「Dindi」、そしてジャズの定番曲「Black Coffee」「Moonglow」。一枚の中でさまざまな時代の音楽に出会えます。",
+      "さらに、森山修さんとの共作「Misty Rain」も収録。既存の名曲だけでなく、自分たちで生み出した楽曲が並んでいます。後藤誠氏は2009年の評で、和田さんがライブで歌い続けた曲を自らの感性で表現し、独自の歌い方を探ってきたように感じられると評しています。これは当時の評論家の見方であり、本人の発言ではありません。",
+      "まずは知っている曲から聴いてみる。そこから今まで知らなかったジャズやボサノヴァへと耳を広げる。和田さんのアルバムは、そうした楽しみ方もできる作品です。"
+    ],
+    "tracks": [
+      "Your Song",
+      "Black Coffee",
+      "Part-Time Lover",
+      "Dindi",
+      "Golden Lady",
+      "Misty Rain",
+      "Just The Two Of Us",
+      "Moonglow"
+    ],
+    "refs": [
+      [
+        "ORICON NEWS・収録曲と発売情報",
+        "https://www.oricon.co.jp/prof/508163/products/867317/1/"
+      ],
+      [
+        "後藤誠のJAZZ研究室・選曲と歌唱への評価",
+        "https://rifftide.exblog.jp/8246153/"
+      ]
+    ]
+  },
+  {
+    "no": "05",
+    "label": "2010 / POP MUSIC",
+    "h": "ジャズの外へ。四季を歌うポップユニット「天国」",
+    "body": [
+      "初アルバムが広く流通した2010年、和田さんは新しい音楽の形にも参加しています。中村寛さん、吉葉サトシさんと結成したポップユニット「天国」です。レーベルのStudio Soupが当時発表した資料には、四季をテーマにしたユニットとして活動を始め、第一弾シングル「春」を同年3月に配信したことが記されています。",
+      "この曲の紹介では、日々の悲しみや希望に寄り添うテーマが打ち出されていました。ジャズのスタンダードを歌う活動とは異なる楽曲の世界へ、ボーカリストとして参加した記録です。",
+      "音楽にはさまざまな入口があります。ジャズをきっかけに和田さんを知った人も、ポップスから知った人も、同じ歌声を通して別のジャンルに出会うことができる。その幅広さも、和田さんを紹介するうえで大切にしたい魅力です。"
+    ],
+    "refs": [
+      [
+        "Studio Soup・2010年のデビュー発表",
+        "https://www.atpress.ne.jp/news/14208"
+      ]
+    ]
+  },
+  {
+    "no": "06",
+    "label": "2012–2014 / KYUSHU LIVE",
+    "h": "福岡・北九州から、地域の人たちへ",
+    "body": [
+      "海外で録音を重ねる一方、和田さんは九州のライブシーンでも活動してきました。2012年のJazz工房Nishimuraの公演案内には、北九州を拠点としてジャズ、ボサノヴァ、ポップス、オリジナル曲を歌うボーカリストとして紹介されています。初出演時には松本圭吏さん、小牧良平さんとの共演が案内されました。",
+      "翌2013年の同店のライブ記録には、石川雄一さんのギター、榊原太郎さんのベース、武本強志さんのドラムとの演奏が残っています。終演後も来場者が店に残り、にぎわいが続いたと会場のブログは伝えています。",
+      "2014年11月21日には、海の道むなかた館の「晩秋のララバイ ～Jazz in 宗像～」に石川雄一さんと出演。宗像市の年報に、約110人が参加した無料コンサートとして記録されています。音楽を専門のライブ会場だけでなく、地域の文化施設へ届けてきた活動の一つです。"
+    ],
+    "refs": [
+      [
+        "Jazz工房Nishimura・2012年公演案内",
+        "https://blog.livedoor.jp/miles1950/archives/1673548.html"
+      ],
+      [
+        "Jazz工房Nishimura・2013年公演記録",
+        "https://blog.livedoor.jp/miles1950/archives/1748500.html"
+      ],
+      [
+        "宗像市・海の道むなかた館年報（平成26年度）",
+        "https://www.city.munakata.lg.jp/searoad/kiji0034296/3_4296_up_r8phn24y.pdf"
+      ]
+    ]
+  },
+  {
+    "no": "07",
+    "label": "2022–2023 / OLD FRIENDS & NEW PLACES",
+    "h": "18年を経ても続く音楽仲間との共演",
+    "body": [
+      "2022年8月、和田さんは自身のブログで、北九州・黒崎のタカミカリィで森山修さんとの演奏を告知しました。ニューヨークでの出会いから約18年を経ても、二人の名前が同じ公演案内に並んでいます。",
+      "同じ月には南阿蘇の山々を望む半野外の会場や、熊本県山都町のカフェでのライブも案内。2023年11月には森山修さん、ベーシスト古荘昇龍さんとの山都町・宮崎県五ヶ瀬町での公演を告知し、山都町の公演は満席となったことを本人が伝えています。",
+      "大きなステージだけが音楽の場所ではありません。食事をしながら歌を楽しめる店、自然に囲まれた小さな会場、演奏者と聴き手が近い空間。公開された公演案内をたどると、和田さんの歌がさまざまな場所で聴かれてきたことが分かります。"
+    ],
+    "refs": [
+      [
+        "本人ブログ・2022年8月の演奏予定",
+        "https://ameblo.jp/izumiwada/entry-12756795302.html"
+      ],
+      [
+        "本人ブログ・2023年11月の演奏予定",
+        "https://ameblo.jp/izumiwada/entry-12827313905.html"
+      ]
+    ]
+  },
+  {
+    "no": "08",
+    "label": "2023 / IN HER OWN WORDS",
+    "h": "生演奏を、もっと身近なものに",
+    "body": [
+      "2023年12月、和田さんはグリーンルーム時代のJazzy Nightを一晩だけ復活させる公演をブログで紹介しました。普段はライブに行かない人や、食事で偶然訪れた人にも音楽に触れてもらえるようにしたいと書き、当時のミュージックチャージを1,000円に設定したことを伝えています。",
+      "これは和田さんが自ら発信した言葉から分かる、音楽を届ける相手への思いです。ジャズに詳しい人だけでなく、初めて生演奏を聴く人にも扉を開く。2002年に自分自身がカフェで演奏に出会ったという経歴を知ると、この公演案内にも重なるものを感じます。",
+      "同年2月のブログでは、熊本のピアニスト豊田隆博さんとの公演を紹介する中で、会場のオーナーが書いた小説から悲しみや希望を感じ、そこで得た着想を歌に持ち込みたいという思いも記していました。歌の活動が人との出会いや、音楽以外の表現からも刺激を受けていることがうかがえます。"
+    ],
+    "refs": [
+      [
+        "本人ブログ・2023年12月 Jazzy Night",
+        "https://ameblo.jp/izumiwada/entry-12831217510.html"
+      ],
+      [
+        "本人ブログ・2023年2月の演奏予定",
+        "https://ameblo.jp/izumiwada/entry-12788952942.html"
+      ]
+    ]
+  },
+  {
+    "no": "09",
+    "label": "2024–2026 / STILL SINGING",
+    "h": "今も続くステージ。次の歌声に会いに行こう",
+    "body": [
+      "2024年、和田さんはブログで、今後の演奏予定をInstagramとFacebookで案内する方針を知らせました。2025年には宗像ユリックスの出前コンサートとして、道の駅むなかたで石川雄一さんとの公演が案内され、同年7月にはチャチャタウン小倉にも二人の公演情報が掲載されています。",
+      "2026年にはMusic Bar Bridgeで同じデュオの公演が7月8日と11月18日に案内されました。2014年の宗像市の記録から十年以上を経ても、歌とギターの組み合わせが続いていることが分かります。これらは公演告知として確認した情報で、すべての開催結果や演奏内容を取材したものではありません。",
+      "カフェでの一つの出会いから、ニューヨーク、北欧での録音、そして九州各地のステージへ。歩んできた道を知ると、これから聴く一曲にも新しい意味が生まれるかもしれません。和田さんの音楽は経歴の中だけにあるものではなく、今も出会うことのできる音楽です。気になった方は、まず歌声に触れ、活動をフォローし、次の公演を訪れてみてください。"
+    ],
+    "refs": [
+      [
+        "本人ブログ・SNSでの告知について",
+        "https://ameblo.jp/izumiwada/entry-12853856746.html"
+      ],
+      [
+        "号外NET・2025年6月 潮騒ライブ",
+        "https://munakata-fukutsu-koga.goguynet.jp/2025/06/08/shiosailive/"
+      ],
+      [
+        "チャチャタウン小倉・2025年7月2日公演案内",
+        "https://www.chachatown.com/eventinfo/5166.html"
+      ],
+      [
+        "Music Bar Bridge・2026年7月公演案内",
+        "https://bridge-josui.com/event/k_9wzq8s9_3"
+      ],
+      [
+        "音めぐり・2026年11月18日公演情報",
+        "https://mut.rip/concerts/166601/"
+      ]
+    ]
+  }
+
   ]:[
     {no:"01",label:"OUR IDEA",h:"ライブが終わったあとも、音楽とつながるために",body:["お気に入りの歌を聴いた夜。演奏が終わって会場を出たあとも、そのときの音や空気が心に残ることがあります。何気ない日常のなかで、もう一度その音楽に出会いたいと思うこともあります。","touchCDが目指しているのは、そうした音楽とのつながりを、スマートフォンの画面だけで完結させず、手に取れる形にすることです。音楽を聴くための入口でありながら、部屋に飾ったり、バッグに付けたりして楽しめるもの。そんなグッズのあり方を、この作品からも伝えたいと考えています。"]},
     {no:"02",label:"ARTWORK",h:"赤と黒で表現された、小さなジャズの世界",body:["『A Jazz Date with Izumi』の実物には、赤と黒を基調とした印象的なジャケットが収められています。表面には文字と鍵盤を思わせるグラフィック。裏面には赤いレコードを思わせるデザイン。透明ケースを通して、それぞれ違った表情を楽しめます。","私たちがこのグッズの魅力として伝えたいのは、音楽のイメージが、目で見て手に触れられることです。ケースの表と裏で変わるデザインは、単なるロゴ入りのキーホルダーとは違い、一つの作品として眺める楽しさを生みます。"],photo:["/touchcd-jazz-both.webp","表面と裏面の実物写真"]},
@@ -302,11 +500,11 @@ function izumiStoryPage(request, kind) {
   ];
   return shell(request,`<main class="izumi-page izumi-editorial-page ${artist?"izumi-artist-story-page":"izumi-making-story-page"} section-shell">
     <a class="crumb" href="${root}">← A Jazz Date with Izumi 商品紹介</a>
-    <p class="izumi-preview-notice">確認用の編集記事です。${artist?"公開プロフィールに基づく紹介で、本人執筆の文章ではありません。":"touchCD側のコンセプト紹介案です。個別の制作経緯・本人のコメントは確認前です。"}</p>
-    <header class="izumi-editorial-hero"><p class="izumi-overline">${artist?"ARTIST STORY / IZUMI WADA":"MAKING STORY / touchCD EDITORIAL"}</p><h1>${headline}</h1><p class="izumi-editorial-subtitle">${artist?"和田いづみ　JAZZ VOCAL":"A Jazz Date with Izumi"}</p><p class="izumi-editorial-lead">${lead}</p><div class="izumi-editorial-author">${artist?"文・編集：touchCD（公開プロフィールをもとに構成）":"文・編集：touchCD（制作側のコンセプト案）"}</div>${artist?"":'<figure><img src="/touchcd-jazz-both.webp" alt="赤と黒のミニCD型キーホルダーの実物" fetchpriority="high"><figcaption>実際に制作されたtouchCD</figcaption></figure>'}</header>
+    <p class="izumi-preview-notice">確認用の編集記事です。${artist?"公開プロフィール・本人ブログ・公演記録・アルバム資料に基づく編集記事です。本人執筆ではありません。":"touchCD側のコンセプト紹介案です。個別の制作経緯・本人のコメントは確認前です。"}</p>
+    <header class="izumi-editorial-hero"><p class="izumi-overline">${artist?"ARTIST STORY / IZUMI WADA":"MAKING STORY / touchCD EDITORIAL"}</p><h1>${headline}</h1><p class="izumi-editorial-subtitle">${artist?"和田いづみ　JAZZ VOCAL":"A Jazz Date with Izumi"}</p><p class="izumi-editorial-lead">${lead}</p><div class="izumi-editorial-author">${artist?"文・編集：touchCD｜公開資料をもとに構成・2026年11月26日":"文・編集：touchCD（制作側のコンセプト案）"}</div>${artist?"":'<figure><img src="/touchcd-jazz-both.webp" alt="赤と黒のミニCD型キーホルダーの実物" fetchpriority="high"><figcaption>実際に制作されたtouchCD</figcaption></figure>'}</header>
     <nav class="izumi-contents" aria-label="記事の目次"><h2>目次</h2>${chapters.map(ch=>`<a href="#chapter-${ch.no}"><span>${ch.no}</span>${ch.h}</a>`).join("")}</nav>
-    <div class="izumi-longread">${chapters.map(ch=>`<section id="chapter-${ch.no}"><p class="izumi-overline">${ch.label}</p><h2>${ch.h}</h2>${ch.body.map(t=>`<p>${t}</p>`).join("")}${ch.photo?`<figure><img src="${ch.photo[0]}" alt="${ch.photo[1]}" loading="lazy"><figcaption>${ch.photo[1]}</figcaption></figure>`:""}</section>`).join("")}</div>
-    ${artist?`<section class="izumi-editorial-end"><p class="izumi-overline">FOLLOW THE ARTIST</p><h2>歌声を聴きに、次のステージへ。</h2><p>公演情報や日々の活動は、和田さんのInstagramでご確認ください。</p><a class="izumi-main-button" href="${instagram}" target="_blank" rel="noopener noreferrer">Instagramで活動を見る ↗</a><p class="izumi-note">経歴の出典：<a href="${source}" target="_blank" rel="noopener noreferrer">Music Bar Bridge 2026年7月8日公演紹介</a>。紹介文・音楽の価値に関する文章は編集部の視点であり、本人の発言を引用したものではありません。</p></section>`:`<section class="izumi-editorial-end"><p class="izumi-overline">THE PRODUCT</p><h2>手のひらに、音楽を。</h2><p>実物の写真、使い方、販売情報は商品紹介ページへ。現在は確認用のため、予約や決済は受け付けていません。</p><a class="izumi-main-button" href="${root}#izumi-product">商品写真を見る ↗</a><p class="izumi-note">実物写真とtouchCDの一般的な商品仕様をもとに構成。制作時の会話、具体的なデザイン決定理由、試行錯誤、本人の感想などは未確認のため記載していません。</p></section>`}
+    <div class="izumi-longread">${chapters.map(ch=>`<section id="chapter-${ch.no}"><p class="izumi-overline">${ch.label}</p><h2>${ch.h}</h2>${ch.body.map(t=>`<p>${t}</p>`).join("")}${ch.tracks?`<div class="izumi-album"><p class="izumi-overline">DISCOGRAPHY / 2009</p><h3>Just The Two Of Us</h3><p>公開済みのアルバム情報（touchCDの収録内容ではありません）</p><ol>${ch.tracks.map(t=>`<li>${escaped(t)}</li>`).join("")}</ol><a class="izumi-outline" href="https://www.oricon.co.jp/prof/508163/products/867317/1/" target="_blank" rel="noopener noreferrer">アルバム情報を見る ↗</a></div>`:""}${ch.refs?`<details class="izumi-chapter-sources"><summary>この章の参考資料（${ch.refs.length}件）</summary><ul>${ch.refs.map(([label,url])=>`<li><a href="${escaped(url)}" target="_blank" rel="noopener noreferrer">${escaped(label)} ↗</a></li>`).join("")}</ul></details>`:""}${ch.photo?`<figure><img src="${ch.photo[0]}" alt="${ch.photo[1]}" loading="lazy"><figcaption>${ch.photo[1]}</figcaption></figure>`:""}</section>`).join("")}</div>
+    ${artist?`<section class="izumi-editorial-end"><p class="izumi-overline">FOLLOW THE ARTIST</p><h2>歌声を聴きに、次のステージへ。</h2><p>歌を聴くこと、次のライブを訪れること、好きな曲を友人に紹介すること。応援の形は一つではありません。まずは公式SNSや公開されている音楽から、和田さんの活動に触れてみてください。</p><a class="izumi-main-button" href="${instagram}" target="_blank" rel="noopener noreferrer">Instagramで活動を見る ↗</a><a class="izumi-outline" href="https://ameblo.jp/izumiwada/" target="_blank" rel="noopener noreferrer">本人のブログを読む ↗</a><p class="izumi-note">出典は各章の「参考資料」を開くと確認できます。公開資料の内容を再構成し、編集部の解釈は本人の発言と区別しています。写真の転載・購入者向けコンテンツの公開は行っていません。</p></section>`:`<section class="izumi-editorial-end"><p class="izumi-overline">THE PRODUCT</p><h2>手のひらに、音楽を。</h2><p>実物の写真、使い方、販売情報は商品紹介ページへ。現在は確認用のため、予約や決済は受け付けていません。</p><a class="izumi-main-button" href="${root}#izumi-product">商品写真を見る ↗</a><p class="izumi-note">実物写真とtouchCDの一般的な商品仕様をもとに構成。制作時の会話、具体的なデザイン決定理由、試行錯誤、本人の感想などは未確認のため記載していません。</p></section>`}
     <div class="izumi-editorial-cross"><a class="izumi-outline" href="${root}">商品紹介に戻る</a><a class="izumi-outline" href="${root}/${artist?"making":"artist"}">${artist?"touchCDの制作ストーリーへ":"和田いづみさんの紹介へ"} ↗</a></div>
     </main>`,{title:title+"｜touchCD",description:lead,image:"/touchcd-jazz-front.webp",unlisted:true,cta:"商品紹介",ctaUrl:root});
 }
