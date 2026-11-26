@@ -212,3 +212,32 @@ function initializeBooking() {
 
   loadCampaign().catch((error) => set("booking-note", error.message));
 }
+
+document.querySelectorAll("[data-fan-discovery]").forEach(root => {
+  const grid = root.querySelector("[data-fan-grid]");
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll("[data-release-card]"));
+  const input = root.querySelector("[data-fan-search]"), sort = root.querySelector("[data-fan-sort]");
+  const buttons = Array.from(root.querySelectorAll("[data-fan-filter]"));
+  let state = "all";
+  const normalize = value => String(value || "").normalize("NFKC").toLocaleLowerCase("ja-JP").trim();
+  function renderCatalog() {
+    const terms = normalize(input.value).split(/\s+/).filter(Boolean);
+    const ordered = [...cards];
+    if (sort.value === "deadline") ordered.sort((a,b) => Number(b.dataset.state === "open") - Number(a.dataset.state === "open") || Number(a.dataset.deadline) - Number(b.dataset.deadline));
+    let count = 0;
+    for (const card of ordered) {
+      const match = (state === "all" || state === card.dataset.state) && terms.every(term => normalize(card.dataset.search).includes(term));
+      card.hidden = !match;
+      if (match) count++;
+      grid.append(card);
+    }
+    buttons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.fanFilter === state)));
+    root.querySelector("[data-fan-count]").textContent = count + "作品";
+    root.querySelector("[data-fan-no-results]").hidden = count !== 0;
+  }
+  input.addEventListener("input", renderCatalog);
+  sort.addEventListener("change", renderCatalog);
+  buttons.forEach(button => button.addEventListener("click", () => { state = button.dataset.fanFilter; renderCatalog(); }));
+  root.querySelector("[data-fan-reset]").addEventListener("click", () => { state = "all"; input.value = ""; sort.value = "default"; renderCatalog(); input.focus(); });
+});
