@@ -260,9 +260,9 @@ async function handleRequest(request, env) {
   if (["GET", "HEAD"].includes(request.method)) {
     if (pathname === "/tokushoho") return assetResponse(request, "/", commerceDisclosure(request, env));
     if (pathname === "/pickup-example") return assetResponse(request, "/", pickupExample(request));
-    if (pathname === "/preview/izumi-wada") return assetResponse(request, "/", izumiWadaPreview(request));
-    if (pathname === "/preview/izumi-wada/artist") return assetResponse(request, "/", izumiStoryPage(request, "artist"));
-    if (pathname === "/preview/izumi-wada/making") return assetResponse(request, "/", izumiStoryPage(request, "making"));
+    if (["/preview/izumi-wada", "/works/izumi-wada"].includes(pathname)) return assetResponse(request, "/", izumiWadaPreview(request));
+    if (["/preview/izumi-wada/artist", "/works/izumi-wada/artist"].includes(pathname)) return assetResponse(request, "/", izumiStoryPage(request, "artist"));
+    if (["/preview/izumi-wada/making", "/works/izumi-wada/making"].includes(pathname)) return assetResponse(request, "/", izumiStoryPage(request, "making"));
     if (pathname === "/") {
       const rows = await catalog(env);
       const real = rows.filter((project) => !project.demo);
