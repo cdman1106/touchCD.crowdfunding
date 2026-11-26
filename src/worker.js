@@ -260,6 +260,8 @@ async function handleRequest(request, env) {
     if (pathname === "/tokushoho") return assetResponse(request, "/", commerceDisclosure(request, env));
     if (pathname === "/pickup-example") return assetResponse(request, "/", pickupExample(request));
     if (pathname === "/preview/izumi-wada") return assetResponse(request, "/", izumiWadaPreview(request));
+    if (pathname === "/preview/izumi-wada/artist") return assetResponse(request, "/", izumiStoryPage(request, "artist"));
+    if (pathname === "/preview/izumi-wada/making") return assetResponse(request, "/", izumiStoryPage(request, "making"));
     if (pathname === "/") {
       const rows = await catalog(env);
       const real = rows.filter((project) => !project.demo);
