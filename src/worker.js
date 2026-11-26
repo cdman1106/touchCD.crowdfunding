@@ -50,7 +50,7 @@ async function publicData(env, campaign) {
       image: campaign.image, contact: campaign.contact,
     },
     reservationGoal: settings.reservation_goal, paidGoal: settings.paid_goal,
-    capacity: settings.capacity, unlimited: isIzumiCampaign(campaign), addressAtPayment: isIzumiCampaign(campaign), reserved, paid, accepting, paymentDeadline: payment?.deadline || "",
+    capacity: settings.capacity, unlimited: isIzumiCampaign(campaign), addressAtPayment: false, reserved, paid, accepting, paymentDeadline: payment?.deadline || "",
   };
   return { ...data, status: statusFor(data) };
 }
@@ -100,10 +100,10 @@ async function reserve(request, env, campaign) {
   const { quantity, verificationId, code, fulfillment = "pickup" } = form || {};
   const shipping = fulfillment === "shipping";
   const shippingFee = campaign.shippingFee ?? null;
-  const postalCode = shipping && !isIzumiCampaign(campaign) && typeof form.postalCode === "string" ? form.postalCode.trim().replace("-", "") : "";
-  const shippingAddress = shipping && !isIzumiCampaign(campaign) && typeof form.shippingAddress === "string" ? form.shippingAddress.trim() : "";
+  const postalCode = shipping && typeof form.postalCode === "string" ? form.postalCode.trim().replace("-", "") : "";
+  const shippingAddress = shipping && typeof form.shippingAddress === "string" ? form.shippingAddress.trim() : "";
   if (!["pickup", "shipping"].includes(fulfillment) || (shipping &&
-      (shippingFee === null || (!isIzumiCampaign(campaign) && (!/^\d{7}$/.test(postalCode) || !shippingAddress || shippingAddress.length > 240 || /[\x00-\x1f\x7f]/.test(shippingAddress)))))) {
+      (shippingFee === null || !/^\d{7}$/.test(postalCode) || !shippingAddress || shippingAddress.length > 240 || /[\x00-\x1f\x7f]/.test(shippingAddress)))) {
     return json({ error: "受取方法と、配送先の郵便番号・住所をご確認ください。" }, 400);
   }
   if (shipping && form.shippingFee !== shippingFee) {

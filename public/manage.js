@@ -88,7 +88,7 @@ function renderEntry(entry) {
   if (shipping) {
     const delivery = document.createElement("p");
     delivery.className = "pickup-entry-code";
-    delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · ${entry.shipping_address ? "〒"+entry.postal_code+" "+entry.shipping_address : "配送先はStripeで確認"}`;
+    delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · ${entry.shipping_address ? "〒"+entry.postal_code+" "+entry.shipping_address : "配送先未登録・発送前に要確認"}`;
     li.append(delivery);
   }
   if (entry.paid) {
