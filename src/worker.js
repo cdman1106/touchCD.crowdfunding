@@ -228,6 +228,7 @@ const mediaTypes = {
   "/touchcd-studio-open.webp": "image/webp",
   "/touchcd-studio-both.webp": "image/webp",
   "/touchcd-jazz-front.webp": "image/webp",
+  "/izumi-wada-live.webp": "image/webp",
   "/touchcd-jazz-back.webp": "image/webp",
   "/touchcd-jazz-open.webp": "image/webp",
   "/touchcd-jazz-both.webp": "image/webp",

@@ -18,6 +18,7 @@ const paths = {
   "/touchcd-studio-open.webp": "touchcd-studio-open.webp",
   "/touchcd-studio-both.webp": "touchcd-studio-both.webp",
   "/touchcd-jazz-front.webp": "touchcd-jazz-front.webp",
+  "/izumi-wada-live.webp": "izumi-wada-live.webp",
   "/touchcd-jazz-back.webp": "touchcd-jazz-back.webp",
   "/touchcd-jazz-open.webp": "touchcd-jazz-open.webp",
   "/touchcd-jazz-both.webp": "touchcd-jazz-both.webp",
