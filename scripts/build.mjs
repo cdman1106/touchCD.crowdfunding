@@ -19,6 +19,7 @@ const paths = {
   "/touchcd-studio-both.webp": "touchcd-studio-both.webp",
   "/touchcd-jazz-front.webp": "touchcd-jazz-front.webp",
   "/izumi-wada-live.webp": "izumi-wada-live.webp",
+  "/izumi-jazz-live-flyer.webp": "izumi-jazz-live-flyer.webp",
   "/touchcd-jazz-back.webp": "touchcd-jazz-back.webp",
   "/touchcd-jazz-open.webp": "touchcd-jazz-open.webp",
   "/touchcd-jazz-both.webp": "touchcd-jazz-both.webp",
