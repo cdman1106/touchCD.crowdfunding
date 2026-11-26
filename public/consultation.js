@@ -61,3 +61,13 @@ syncQuantityButtons();
 document.querySelectorAll("[data-open-planner]").forEach(link => link.addEventListener("click", () => { $("detailPlanner").open = true; }));
 if (location.hash === "#diagnosis") $("detailPlanner").open = true;
 window.addEventListener("hashchange", () => { if (location.hash === "#diagnosis") $("detailPlanner").open = true; });
+
+// Reveal linked details while keeping technical information collapsed on initial load.
+function revealConsultationHash(hash){
+  const id = String(hash || "").replace(/^#/, "");
+  if (["plan-a","plan-b","plan-c"].includes(id)) { const detail = document.getElementById(id); if (detail) detail.open = true; }
+  if (id === "mockup") { const detail = document.getElementById("mockupFold"); if (detail) detail.open = true; }
+}
+document.querySelectorAll('a[href^="#"]').forEach(link => link.addEventListener("click", () => revealConsultationHash(link.hash)));
+revealConsultationHash(location.hash);
+window.addEventListener("hashchange", () => revealConsultationHash(location.hash));
