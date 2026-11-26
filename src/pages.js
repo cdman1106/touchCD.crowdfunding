@@ -255,3 +255,34 @@ function pickupExample(request) {
     </section>
   </main>`, { title: "支払い完了メールの見本｜touchCD", unlisted: true });
 }
+
+function izumiWadaPreview(request) {
+  const instagram = "https://www.instagram.com/singer_izumiwada/";
+  const source = "https://bridge-josui.com/event/k_9wzq8s9_3";
+  const photos = [
+    ["/touchcd-jazz-front.webp","表面・ジャケット","赤と黒のジャケットを収めた透明なミニCDケース"],
+    ["/touchcd-jazz-back.webp","裏面・レコードデザイン","赤いレコードをモチーフにしたケースの裏面"],
+    ["/touchcd-jazz-both.webp","表と裏のデザイン","表面と裏面のデザインを並べた写真"]
+  ];
+  const milestones = [
+    ["2002","ジャズとの出会い","カフェで働いていた頃にジャズの生演奏に触れ、ボーカルの世界へ。"],
+    ["2004","ニューヨークでの録音","現地で出会ったギタリストとオリジナル曲やジャズスタンダードを録音。"],
+    ["2008","スウェーデンへ","森泰人らと現地でレコーディング。"],
+    ["2009","初アルバムを発表","『Just The Two Of Us』をリリース。翌年には全国流通へ。"]
+  ];
+  return shell(request, `<main class="izumi-page section-shell">
+    <a class="crumb" href="/#releases">← touchCD 作品一覧</a>
+    <p class="izumi-preview-notice">確認用プレビュー・販売開始前の紹介案です。現在、このページでは予約・決済を受け付けていません。</p>
+    <section class="izumi-hero">
+      <figure class="izumi-hero-photo"><img src="/touchcd-jazz-both.webp" alt="A Jazz Date with Izumiの表面と裏面の実物写真" fetchpriority="high"><figcaption>実際に制作したtouchCD</figcaption></figure>
+      <div class="izumi-hero-copy"><p class="izumi-overline">IZUMI WADA / JAZZ VOCAL</p><h1>A Jazz Date<br>with Izumi</h1><p class="izumi-artist-name">和田いづみ × touchCD</p><h2>ジャズの余韻を、<br>いつもそばに。</h2><p>心に残る歌声。赤と黒のアートワーク。音楽との出会いを、手のひらに収まる小さな作品に。</p><div class="izumi-tags"><span>ミニCD型キーホルダー</span><span>NFC搭載</span><span>作品へのリンク</span></div><div class="izumi-price"><small>想定販売価格（確認用）</small><strong>¥3,000<span> 税込</span></strong><p>実際の販売価格・在庫・受取方法は未確定です。</p></div><a class="izumi-main-button" href="#izumi-story">作品のストーリーを見る ↓</a><a class="izumi-outline" href="${instagram}" target="_blank" rel="noopener noreferrer">和田いづみさんのInstagram ↗</a></div>
+    </section>
+    <nav class="izumi-nav" aria-label="作品紹介ページ内"><a href="#izumi-story">ストーリー</a><a href="#izumi-product">商品写真</a><a href="#izumi-experience">タッチ体験</a><a href="#izumi-artist">アーティスト</a><a href="#izumi-faq">FAQ</a></nav>
+    <section id="izumi-story" class="izumi-story"><p class="izumi-overline">THE STORY</p><h2>音楽を聴いた時間を、<br>持ち帰るということ。</h2><p>ライブの帰り道や、ふとジャズを聴きたくなった夜。お気に入りの音楽を思い出すきっかけが、いつも手元にあったら。</p><p>福岡で活動するジャズボーカリスト、和田いづみさん。ジャズとの出会いから、ニューヨークやスウェーデンでの録音へと歩みを重ねてきたシンガーです。</p><p>今回紹介する「A Jazz Date with Izumi」は、赤と黒のジャケットとレコードを思わせる赤いミニディスクを組み合わせたtouchCD。眺めて楽しむだけでなく、対応スマートフォンを近づけると、設定された作品のページにつながります。</p><p class="izumi-story-last">好きな歌声との距離を、もう少し近くに。</p></section>
+    <section id="izumi-product"><p class="izumi-overline">THE OBJECT</p><h2>小さなケースに、<br>作品の世界観を。</h2><div class="izumi-gallery">${photos.map(([src, label, alt]) => `<figure><img src="${src}" alt="${alt}" loading="lazy"><figcaption>${label}</figcaption></figure>`).join("")}</div><div class="izumi-value-grid"><article><span>01</span><h3>飾る・持ち歩く</h3><p>赤と黒のアートワークを、バッグや鍵につけて楽しむ。</p></article><article><span>02</span><h3>開いて楽しむ</h3><p>開閉する透明ケースと取り外せるミニディスク。小さな音楽グッズならではの楽しさ。</p></article><article><span>03</span><h3>音楽につながる</h3><p>対応スマホをかざして、作品へのリンクを読み取る。</p></article></div><p class="izumi-note">実物写真。ミニディスクは通常のCDプレーヤーで再生するものではありません。</p></section>
+    <section id="izumi-experience" class="izumi-experience"><div><p class="izumi-overline">AFTER TOUCH</p><h2>かざした先に、<br>作品との続きがある。</h2><p>touchCDはNFC対応スマートフォンでリンクを読み取る音楽グッズ。アプリの追加インストールなしで、設定されたWebページを開く仕組みです。</p><p>この作品のリンク先は、購入者向けの内容として一般の商品紹介ページには掲載していません。公開範囲・収録内容・利用条件は販売時にご案内します。</p><small>右の画面は仕組みを伝えるためのイメージです。実際の購入者ページではなく、楽曲・曲数・映像等の収録を保証するものではありません。</small></div><div class="izumi-touch-visual" role="img" aria-label="touchCDにスマホをかざして購入者向けの作品ページにつながる仕組みのイメージ"><figure><img src="/touchcd-jazz-front.webp" alt="" loading="lazy"><figcaption>touchCD</figcaption></figure><span class="izumi-touch-arrow" aria-hidden="true">→</span><div class="izumi-mock-phone" aria-hidden="true"><div class="izumi-phone-notch"></div><small>IZUMI WADA</small><div class="izumi-phone-art"><span>A Jazz Date<br>with Izumi</span><div class="izumi-record"></div></div><b>作品のページへ</b><span class="izumi-lock">購入者向けコンテンツ</span><small>画面イメージ</small></div></div></section>
+    <section id="izumi-artist"><p class="izumi-overline">ABOUT THE ARTIST</p><h2>和田いづみ<span class="izumi-roman">IZUMI WADA</span></h2><p class="izumi-profile-intro">福岡で活動するボーカリスト。ジャズを軸に、ボサノヴァやポップスの楽曲にも取り組み、伸びやかな歌唱と個性的な声で活動を続けています。</p><ol class="izumi-timeline">${milestones.map(([year,title,body])=>`<li><span>${year}</span><div><h3>${title}</h3><p>${body}</p></div></li>`).join("")}</ol><p class="izumi-note">経歴参考：<a href="${source}" target="_blank" rel="noopener noreferrer">Music Bar Bridge 公演紹介</a>（2026年7月8日公演）。紹介文はtouchCDによる編集であり、本人の発言・コメントではありません。</p><a class="izumi-outline" href="${instagram}" target="_blank" rel="noopener noreferrer">Instagramで活動を見る ↗</a></section>
+    <section class="izumi-order" id="izumi-order"><p class="izumi-overline">COLLECT / SUPPORT</p><h2>お気に入りのジャズを、手元に。</h2><p>アートワークを手に取り、音楽とのつながりを楽しむ。ご自身のコレクションにも、ジャズが好きな方への贈り物にも。</p><div class="izumi-order-state"><strong>販売情報は確認中です</strong><span>予約受付・在庫・販売価格・受け取り方法が決まり次第、正式な作品ページでご案内します。</span></div><a class="izumi-outline" href="${instagram}" target="_blank" rel="noopener noreferrer">アーティストの活動を見る ↗</a></section>
+    <section id="izumi-faq" class="izumi-faq"><h2>よくある質問</h2><details class="faq"><summary>音楽はどうやって聴くの？</summary><p>NFC対応スマートフォンをかざし、読み取ったリンクを開きます。接続先の詳細は販売時にご案内します。</p></details><details class="faq"><summary>本物のCDとして再生できますか？</summary><p>いいえ。ミニディスクは観賞用のグッズです。</p></details><details class="faq"><summary>今すぐ購入できますか？</summary><p>このページは確認用です。現在は予約・購入を受け付けていません。正式な販売条件は未確定です。</p></details><details class="faq"><summary>対応するスマートフォンは？</summary><p>NFCに対応した端末と通信環境が必要です。読み取り位置やリンクの開き方は機種によって異なります。</p></details></section>
+    </main>`, { title:"A Jazz Date with Izumi｜和田いづみ × touchCD",description:"ジャズの余韻をいつもそばに。和田いづみさんのtouchCD作品紹介・確認用プレビュー。",image:"/touchcd-jazz-front.webp",unlisted:true,cta:"作品紹介",ctaUrl:"#izumi-product" });
+}
