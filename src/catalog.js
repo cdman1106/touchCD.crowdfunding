@@ -1,5 +1,7 @@
 const artistPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const releasePath = (campaign) => `/artists/${campaign.artistSlug}/${campaign.slug}`;
+const izumiCampaignId = "izumi-wada-jazz-date";
+const isIzumiCampaign = (campaign) => campaign?.id === izumiCampaignId;
+const releasePath = (campaign) => isIzumiCampaign(campaign) ? "/works/izumi-wada" : `/artists/${campaign.artistSlug}/${campaign.slug}`;
 const validSlug = (value) => typeof value === "string" && value.length >= 2 && value.length <= 48 && artistPattern.test(value);
 const parseRelease = (path) => {
   const [,collection,artist,project,...rest] = path.split("/");
@@ -50,7 +52,7 @@ function fromRow(row) {
     music: row.music, contact: row.contact, visibility: row.visibility,
     eventInfo: row.event_info, audioAt: row.audio_at, releaseUpdate: row.release_update,
     shippingNote: row.shipping_note, shippingFee: row.shipping_fee,
-    reservationOpen: Boolean(row.reservation_open), managed: true, closesAt: Date.parse(row.deadline),
+    reservationOpen: Boolean(row.reservation_open), managed: true, closesAt: row.id === izumiCampaignId && !row.deadline ? Number.MAX_SAFE_INTEGER : Date.parse(row.deadline),
   };
 }
 
@@ -152,7 +154,7 @@ async function saveProject(request, env) {
       !allowedUrl(image) || !allowedUrl(music) || !allowedUrl(contact, true)) {
     return json({ error: "締切日時とURLをご確認ください。画像・楽曲のURLは https:// で入力してください。" }, 400);
   }
-  if (reservationOpen && (visibility === "draft" || !story || !pickup || !contact || !image || !Number.isFinite(closesAt) || closesAt <= Date.now())) {
+  if (reservationOpen && (visibility === "draft" || !story || !pickup || !contact || !image || (!(isIzumiCampaign(current) && !deadline) && (!Number.isFinite(closesAt) || closesAt <= Date.now())))) {
     return json({ error: "受付を始めるには公開設定、作品紹介、画像、未来の締切、受取案内、問い合わせ先を設定してください。" }, 400);
   }
   const args = [title, story, pickup, price, deadline, image, music, contact, visibility, Number(reservationOpen),

@@ -122,8 +122,8 @@ async function startVerification(request, env, campaign) {
   const body = await readBody(request);
   const email = asEmail(body?.email);
   if (!validEmail(email)) return json({ error: "メールアドレスをご確認ください。" }, 400);
-  const { reserved, capacity } = await publicData(env, campaign);
-  if (reserved >= capacity) return json({ error: "予定数に達しました。" }, 409);
+  const { reserved, capacity, unlimited } = await publicData(env, campaign);
+  if (!unlimited && reserved >= capacity) return json({ error: "予定数に達しました。" }, 409);
   const now = Date.now();
   const id = crypto.randomUUID();
   const code = randomCode();

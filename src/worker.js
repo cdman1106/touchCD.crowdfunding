@@ -16,6 +16,7 @@ function legacyCampaign(env) {
 }
 
 function defaults(campaign) {
+  if (isIzumiCampaign(campaign)) return { reservation_goal: 35, paid_goal: 25, capacity: 10000, offline_reserved: 0, offline_paid: 0 };
   return { reservation_goal: 15, paid_goal: 12, capacity: 25, offline_reserved: campaign.id === "studio-demo" ? 8 : campaign.demo ? 4 : 0, offline_paid: 0 };
 }
 
@@ -49,7 +50,7 @@ async function publicData(env, campaign) {
       image: campaign.image, contact: campaign.contact,
     },
     reservationGoal: settings.reservation_goal, paidGoal: settings.paid_goal,
-    capacity: settings.capacity, reserved, paid, accepting, paymentDeadline: payment?.deadline || "",
+    capacity: settings.capacity, unlimited: isIzumiCampaign(campaign), addressAtPayment: isIzumiCampaign(campaign), reserved, paid, accepting, paymentDeadline: payment?.deadline || "",
   };
   return { ...data, status: statusFor(data) };
 }
@@ -99,10 +100,10 @@ async function reserve(request, env, campaign) {
   const { quantity, verificationId, code, fulfillment = "pickup" } = form || {};
   const shipping = fulfillment === "shipping";
   const shippingFee = campaign.shippingFee ?? null;
-  const postalCode = shipping && typeof form.postalCode === "string" ? form.postalCode.trim().replace("-", "") : "";
-  const shippingAddress = shipping && typeof form.shippingAddress === "string" ? form.shippingAddress.trim() : "";
+  const postalCode = shipping && !isIzumiCampaign(campaign) && typeof form.postalCode === "string" ? form.postalCode.trim().replace("-", "") : "";
+  const shippingAddress = shipping && !isIzumiCampaign(campaign) && typeof form.shippingAddress === "string" ? form.shippingAddress.trim() : "";
   if (!["pickup", "shipping"].includes(fulfillment) || (shipping &&
-      (shippingFee === null || !/^\d{7}$/.test(postalCode) || !shippingAddress || shippingAddress.length > 240 || /[\x00-\x1f\x7f]/.test(shippingAddress)))) {
+      (shippingFee === null || (!isIzumiCampaign(campaign) && (!/^\d{7}$/.test(postalCode) || !shippingAddress || shippingAddress.length > 240 || /[\x00-\x1f\x7f]/.test(shippingAddress)))))) {
     return json({ error: "受取方法と、配送先の郵便番号・住所をご確認ください。" }, 400);
   }
   if (shipping && form.shippingFee !== shippingFee) {
@@ -133,15 +134,15 @@ async function reserve(request, env, campaign) {
       AND expires_at > unixepoch('subsec') * 1000 AND attempts < 5)
     AND ? > unixepoch('subsec') * 1000 AND (? = 0 OR EXISTS (
       SELECT 1 FROM projects WHERE id = ? AND reservation_open = 1 AND visibility <> 'draft'
-      AND julianday(deadline) > julianday('now') AND price = ? AND (? = 0 OR shipping_fee = ?)
-    )) AND
+      AND (julianday(deadline) > julianday('now') OR (? = 1 AND deadline = '')) AND price = ? AND (? = 0 OR shipping_fee = ?)
+    )) AND (? = 1 OR
       (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ?) + ? +
       COALESCE((SELECT offline_reserved FROM campaign_settings WHERE campaign_id = ?), 0) <=
-      COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?)
+      COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?))
     ON CONFLICT(campaign_id, email) DO NOTHING
   `).bind(id, campaign.id, name, email, quantity, time, time, fulfillment, shipping ? shippingFee : 0, postalCode, shippingAddress,
-    verificationId, campaign.id, email, digest, campaign.closesAt, Number(Boolean(campaign.managed)), campaign.id, campaign.price,
-    Number(shipping), shippingFee,
+    verificationId, campaign.id, email, digest, campaign.closesAt, Number(Boolean(campaign.managed)), campaign.id, Number(isIzumiCampaign(campaign)), campaign.price,
+    Number(shipping), shippingFee, Number(isIzumiCampaign(campaign)),
     campaign.id, quantity, campaign.id, campaign.id, defaults(campaign).capacity);
   const consume = db.prepare("DELETE FROM email_verifications WHERE id = ? AND EXISTS (SELECT 1 FROM reservations WHERE id = ?)")
     .bind(verificationId, id);
@@ -172,11 +173,11 @@ async function saveSettings(request, db, campaign) {
   const result = await db.prepare(`
     INSERT INTO campaign_settings (campaign_id, reservation_goal, paid_goal, capacity, offline_reserved, offline_paid)
     SELECT ?, ?, ?, ?, ?, ?
-    WHERE (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ?) + ? <= ?
+    WHERE ? = 1 OR (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ?) + ? <= ?
     ON CONFLICT(campaign_id) DO UPDATE SET reservation_goal = excluded.reservation_goal,
       paid_goal = excluded.paid_goal, capacity = excluded.capacity, offline_reserved = excluded.offline_reserved,
       offline_paid = excluded.offline_paid
-  `).bind(campaign.id, goal, paidGoal, capacity, offlineReserved, offlinePaid, campaign.id, offlineReserved, capacity).run();
+  `).bind(campaign.id, goal, paidGoal, capacity, offlineReserved, offlinePaid, Number(isIzumiCampaign(campaign)), campaign.id, offlineReserved, capacity).run();
   return result.meta.changes ? json({ saved: true }) : json({ error: "既存の予約数を下回る上限には変更できません。" }, 409);
 }
 
@@ -195,11 +196,11 @@ async function editReservation(request, env, campaign) {
       WHEN ? = 0 THEN NULL
       WHEN email_verified_at IS NOT NULL THEN COALESCE(paid_receipt_id, ?)
       ELSE NULL END
-    WHERE campaign_id = ? AND id = ? AND pickup_at IS NULL AND (paid = 0 OR ? = 0 OR quantity = ?) AND
+    WHERE campaign_id = ? AND id = ? AND pickup_at IS NULL AND (paid = 0 OR ? = 0 OR quantity = ?) AND (? = 1 OR
       (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ? AND id <> ?) + ? +
       COALESCE((SELECT offline_reserved FROM campaign_settings WHERE campaign_id = ?), 0) <=
-      COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?)
-  `).bind(quantity, Number(paid), quantity, Number(paid), receiptId, campaign.id, id, Number(paid), quantity,
+      COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?))
+  `).bind(quantity, Number(paid), quantity, Number(paid), receiptId, campaign.id, id, Number(paid), quantity, Number(isIzumiCampaign(campaign)),
     campaign.id, id, quantity, campaign.id, campaign.id, defaults(campaign).capacity);
   const queued = db.prepare(`
     INSERT INTO payment_receipts (id, reservation_id, message, created_at)
@@ -260,7 +261,10 @@ async function handleRequest(request, env) {
   if (["GET", "HEAD"].includes(request.method)) {
     if (pathname === "/tokushoho") return assetResponse(request, "/", commerceDisclosure(request, env));
     if (pathname === "/pickup-example") return assetResponse(request, "/", pickupExample(request));
-    if (["/preview/izumi-wada", "/works/izumi-wada"].includes(pathname)) return assetResponse(request, "/", izumiWadaPreview(request));
+    if (["/preview/izumi-wada", "/works/izumi-wada"].includes(pathname)) {
+      const campaign = await findCampaign(env, { id: izumiCampaignId });
+      return assetResponse(request, "/", izumiWadaPreview(request, campaign ? await publicData(env, campaign) : null));
+    }
     if (["/preview/izumi-wada/artist", "/works/izumi-wada/artist"].includes(pathname)) return assetResponse(request, "/", izumiStoryPage(request, "artist"));
     if (["/preview/izumi-wada/making", "/works/izumi-wada/making"].includes(pathname)) return assetResponse(request, "/", izumiStoryPage(request, "making"));
     if (pathname === "/") {
@@ -272,7 +276,7 @@ async function handleRequest(request, env) {
     if (route) {
       if (route.project) {
         const project = await findCampaign(env, route);
-        if (project) return assetResponse(request, "/", projectPage(request, await publicData(env, project)));
+        if (project) return assetResponse(request, "/", isIzumiCampaign(project) ? izumiWadaPreview(request, await publicData(env, project)) : projectPage(request, await publicData(env, project)));
       } else {
         const rows = await catalog(env, route.artist);
         if (rows.length) return assetResponse(request, "/", artistPage(request, await Promise.all(rows.map((p) => publicData(env, p)))));

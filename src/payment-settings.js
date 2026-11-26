@@ -69,6 +69,7 @@ function paymentGuide(campaign, { name, quantity, price, fulfillment, shipping_f
     `決済リンク：${link}`,
     "",
     "お支払いの際は、無料予約に使ったメールアドレスをご入力ください。",
+    ...(shipping && isIzumiCampaign(campaign) ? ["配送先の住所・郵便番号はStripeの決済画面でご入力ください。"] : []),
     "入金を確認できましたら、お支払い完了メールをお送りします。",
     "必要な入金数に達せず製造が決まらなかった場合は、返金をご案内します。",
     "touchCD",

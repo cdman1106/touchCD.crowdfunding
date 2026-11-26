@@ -88,7 +88,7 @@ function renderEntry(entry) {
   if (shipping) {
     const delivery = document.createElement("p");
     delivery.className = "pickup-entry-code";
-    delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · 〒${entry.postal_code} ${entry.shipping_address}`;
+    delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · ${entry.shipping_address ? "〒"+entry.postal_code+" "+entry.shipping_address : "配送先はStripeで確認"}`;
     li.append(delivery);
   }
   if (entry.paid) {
@@ -235,7 +235,7 @@ async function loadReservations(projectId) {
   const { campaign, reserved, paid } = result.data;
   $("offline-label").textContent = campaign.demo ? "サンプルの予約数" : "サイト外で受け付けた予約数";
   $("offline-paid-label").textContent = campaign.demo ? "サンプルの入金数" : "サイト外で確認した入金数";
-  $("overview").textContent = `無料予約 ${reserved}個 · 入金済み ${paid}個`;
+  $("overview").textContent = `無料予約 ${reserved}個 · 入金済み ${paid}個${result.data.unlimited ? " · 受付上限なし（上限欄の値はこの企画に適用しません）" : ""}`;
   const { reservationGoal } = result.data;
   paymentSettings.elements.checkout_url.value = result.paymentSettings.checkout_url;
   paymentSettings.elements.deadline.value = result.paymentSettings.deadline.slice(0, 16);

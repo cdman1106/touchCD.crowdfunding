@@ -21,8 +21,8 @@ function initializeBooking() {
 
   function render() {
     const { campaign, reservationGoal, paidGoal, capacity, reserved, paid, accepting } = data;
-    const booked = Math.min(capacity, reserved + demoCount);
-    const canReserve = accepting && booked < capacity;
+    const booked = data.unlimited ? reserved + demoCount : Math.min(capacity, reserved + demoCount);
+    const canReserve = accepting && (data.unlimited || booked < capacity);
     set("reservation-count", booked);
     set("reservation-note", booked >= reservationGoal ? "支払い案内の条件を達成しました。" : `あと${reservationGoal - booked}個で支払い案内へ。`);
     $("reservation-progress").max = reservationGoal;
@@ -37,15 +37,16 @@ function initializeBooking() {
     $("mobile-reserve").disabled = !canReserve;
     $("mobile-booking").hidden = !canReserve;
     set("booking-note", canReserve ? "予約時のお支払いは0円です。" :
-      booked >= capacity ? "予定数に達しました。" : "現在、予約を受け付けていません。");
-    set("campaign-status", campaign.demo && booked >= capacity ? "サンプル・予定数到達" : data.status);
+      !data.unlimited && booked >= capacity ? "予定数に達しました。" : "現在、予約を受け付けていません。");
+    set("campaign-status", campaign.demo && !data.unlimited && booked >= capacity ? "サンプル・予定数到達" : data.status);
   }
 
   function updateTotal() {
     const shipping = form.elements.fulfillment.value === "shipping" && !delivery.disabled;
     const fee = shipping ? data.campaign.shippingFee : 0;
-    const showAddress = shipping && !data.campaign.demo;
-    address.hidden = !shipping;
+    const showAddress = shipping && !data.campaign.demo && !data.addressAtPayment;
+    address.hidden = !shipping || data.addressAtPayment;
+    $("shipping-later-note").hidden = !shipping || !data.addressAtPayment;
     address.disabled = !showAddress;
     shippingFields.hidden = !showAddress;
     $("shipping-preview-note").hidden = !data.campaign.demo;
@@ -67,7 +68,7 @@ function initializeBooking() {
     $("booking-success").hidden = true;
     form.hidden = false;
     set("form-error", "");
-    const remaining = data.capacity - data.reserved - demoCount;
+    const remaining = data.unlimited ? 5 : data.capacity - data.reserved - demoCount;
     quantity.replaceChildren(...Array.from({ length: Math.min(5, remaining) }, (_, i) => new Option(`${i + 1}個`, i + 1)));
     document.querySelectorAll(".customer-field").forEach((field) => {
       const hidden = data.campaign.demo && !field.classList.contains("preview-field");
