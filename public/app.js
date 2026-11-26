@@ -66,6 +66,7 @@ function initializeBooking() {
     $("resend-code").disabled = false;
     $("change-email").disabled = false;
     $("booking-success").hidden = true;
+    $("cancel-after-booking").hidden = true;
     form.hidden = false;
     set("form-error", "");
     const remaining = data.unlimited ? 5 : data.capacity - data.reserved - demoCount;
@@ -75,7 +76,7 @@ function initializeBooking() {
       field.hidden = hidden;
       field.querySelector("input").disabled = hidden;
     });
-    set("form-intro", data.campaign.demo ? "確認版では、入力したメールアドレスをサーバーに送りません。認証コードは次の画面に表示されます。" : "今お支払いいただく金額は0円です。");
+    set("form-intro", data.campaign.demo ? "確認版では、入力したメールアドレスをサーバーに送りません。認証コードは次の画面に表示されます。" : "今お支払いいただく金額は0円です。後日のお支払いはクレジットカードのみです。");
     $("resend-code").hidden = data.campaign.demo;
     set("submit-reserve", data.campaign.demo ? "確認コードを表示する" : "認証コードを受け取る");
     delivery.hidden = data.campaign.shippingFee == null;
@@ -188,6 +189,7 @@ function initializeBooking() {
         if (current !== round || !dialog.open) return;
         set("success-text", "メール認証が完了し、無料予約を受け付けました。条件を満たしたら同じアドレスへお支払いをご案内します。");
         set("booking-reference", `予約番号 ${result.id} ／ ${reservation.fulfillment === "shipping" ? "自宅配送" : "会場受取"}`);
+        $("cancel-after-booking").hidden = false;
         loadCampaign().catch(() => {});
       }
       verification.hidden = true;
@@ -202,6 +204,63 @@ function initializeBooking() {
         $("change-email").disabled = false;
       }
     }
+  });
+
+  const cancelDialog = $("cancel-dialog");
+  const cancelEmailForm = $("cancel-email-form");
+  const cancelCodeForm = $("cancel-code-form");
+  let cancelEmail = "", cancelId = "", cancelRound = 0;
+  const resetCancel = () => {
+    cancelRound++;
+    cancelEmail = ""; cancelId = "";
+    cancelEmailForm.reset(); cancelCodeForm.reset();
+    cancelEmailForm.hidden = false; cancelCodeForm.hidden = true;
+    cancelEmailForm.querySelector("button").disabled = false;
+    cancelCodeForm.querySelector("button").disabled = false;
+    $("cancel-restart").disabled = false;
+    set("cancel-result", "");
+  };
+  const cancelButtons = [...document.querySelectorAll("[data-cancel-reservation]")];
+  if (!cancelButtons.some(button => !button.closest("#cancel-after-booking"))) {
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "secondary"; button.textContent = "無料予約をキャンセルする";
+    $("share-project").before(button); cancelButtons.push(button);
+  }
+  cancelButtons.forEach(button => button.addEventListener("click", () => {
+    if (!data || data.campaign.demo || cancelDialog.open) return;
+    if (dialog.open) dialog.close();
+    resetCancel(); cancelDialog.showModal();
+  }));
+  $("cancel-close").addEventListener("click", () => cancelDialog.close());
+  cancelDialog.addEventListener("close", resetCancel);
+  $("cancel-restart").addEventListener("click", resetCancel);
+  cancelEmailForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const current = cancelRound, button = cancelEmailForm.querySelector("button");
+    button.disabled = true; set("cancel-result", "");
+    try {
+      const email = cancelEmailForm.elements.email.value.trim();
+      const result = await api("cancel-code", { email });
+      if (current !== cancelRound || !cancelDialog.open) return;
+      cancelEmail = email; cancelId = result.verificationId;
+      cancelEmailForm.hidden = true; cancelCodeForm.hidden = false;
+      set("cancel-result", "認証コードを送信しました。有効期限は10分です。");
+      cancelCodeForm.elements.code.focus();
+    } catch (error) { if (current === cancelRound) set("cancel-result", error.message); }
+    finally { if (current === cancelRound) button.disabled = false; }
+  });
+  cancelCodeForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const current = cancelRound, button = cancelCodeForm.querySelector("button");
+    button.disabled = true; $("cancel-restart").disabled = true; set("cancel-result", "");
+    try {
+      await api("cancel-reservation", { email: cancelEmail, verificationId: cancelId, code: cancelCodeForm.elements.code.value.trim() });
+      loadCampaign().catch(() => {});
+      if (current !== cancelRound || !cancelDialog.open) return;
+      cancelCodeForm.hidden = true;
+      set("cancel-result", "無料予約をキャンセルしました。お支払いは発生しません。");
+    } catch (error) { if (current === cancelRound) set("cancel-result", error.message); }
+    finally { if (current === cancelRound) { button.disabled = false; $("cancel-restart").disabled = false; } }
   });
 
   async function loadCampaign() {

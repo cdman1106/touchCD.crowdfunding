@@ -31,5 +31,20 @@
     <button class="primary" id="verify-reserve" type="submit">認証して予約する</button>
     <div class="verification-actions"><button type="button" id="change-email">入力内容を変更する</button><button type="button" id="resend-code">コードを再送する</button></div>
   </form>
-  <div id="booking-success" aria-live="polite" hidden><p id="success-text"></p><p id="booking-reference"></p><p><a class="text-link" href="/pickup-example" id="receipt-example-link" target="_blank" rel="noopener" hidden>支払い完了メールの見本を見る ↗</a></p><button type="button" class="primary" id="finish-reserve">閉じる</button></div>
+  <div id="booking-success" aria-live="polite" hidden><p id="success-text"></p><p id="booking-reference"></p><p><a class="text-link" href="/pickup-example" id="receipt-example-link" target="_blank" rel="noopener" hidden>支払い完了メールの見本を見る ↗</a></p><p id="cancel-after-booking" hidden><button type="button" data-cancel-reservation>無料予約をキャンセルする</button></p><button type="button" class="primary" id="finish-reserve">閉じる</button></div>
+</dialog>
+
+<dialog id="cancel-dialog" aria-labelledby="cancel-title">
+  <div class="dialog-head"><h2 id="cancel-title">無料予約のキャンセル</h2><button type="button" class="close" id="cancel-close" aria-label="閉じる">×</button></div>
+  <p>決済案内の準備前の無料予約を取り消します。予約時と同じメールアドレスで認証してください。</p>
+  <form id="cancel-email-form">
+    <label>メールアドレス<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+    <button class="primary" type="submit">認証コードを送る</button>
+  </form>
+  <form id="cancel-code-form" hidden>
+    <label>6桁の認証コード<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
+    <button class="primary" type="submit">無料予約を取り消す</button>
+    <button type="button" id="cancel-restart">メールアドレス変更・コード再送</button>
+  </form>
+  <p id="cancel-result" role="status" aria-live="polite"></p>
 </dialog>

@@ -64,6 +64,7 @@ function paymentGuide(campaign, { name, quantity, price, fulfillment, shipping_f
     `お支払い期限：${paymentDate.format(new Date(deadline))}（日本時間）`,
     `お受け取り：${shipping ? `自宅配送（${campaign.shippingNote || "成立後に発送案内"}）` : campaign.pickup}`,
     "",
+    "お支払い方法：クレジットカード決済（Stripe）のみ",
     "お支払い後のお客様都合によるキャンセル・返品はお受けできません。",
     `返品・不良品対応（特定商取引法に基づく表記）：${disclosureUrl}`,
     `決済リンク：${link}`,
@@ -103,5 +104,8 @@ async function draftPaymentGuide(request, env, campaign) {
     return json({ error: entry.shipping_fee > 0 ? "送料込みの金額で作成した個別決済リンクを保存してください。" : entry.quantity > 1 ? `${entry.quantity}個分の個別決済リンクをこの予約に保存してください。` :
       "作品の共通決済リンク、またはこの予約の個別決済リンクを保存してください。" }, 409);
   }
+  // Persist the link before exposing a payment guide to prevent a cancellation race.
+  const locked = await env.DB.prepare("UPDATE reservations SET payment_url = ? WHERE id = ? AND campaign_id = ? AND paid = 0 AND COALESCE(payment_url, '') = ?").bind(link, body.id, campaign.id, entry.payment_url || "").run();
+  if (!locked.meta.changes) return json({ error: "予約がキャンセルされたか、更新されました。最新の予約一覧をご確認ください。" }, 409);
   return json(paymentGuide(campaign, { ...entry, price: campaign.price }, settings.deadline, link, disclosureUrl));
 }

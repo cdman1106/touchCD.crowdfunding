@@ -158,6 +158,25 @@ async function reserve(request, env, campaign) {
   return json({ id }, 201);
 }
 
+async function cancelReservation(request, env, campaign) {
+  if (campaign.demo || !env.DB || !mailReady(env)) return json({ error: "現在キャンセル手続きを利用できません。お問い合わせください。" }, 503);
+  const body = await readBody(request);
+  const email = asEmail(body?.email);
+  const { verificationId, code } = body || {};
+  if (!validEmail(email) || !uuidLike(verificationId) || typeof code !== "string" || !/^\d{6}$/.test(code)) return json({ error: "メールアドレスと6桁の認証コードをご確認ください。" }, 400);
+  const db = env.DB;
+  const digest = await emailDigest(env, ["cancel", campaign.id, verificationId, email, code]);
+  const check = "id = ? AND campaign_id = ? AND email = ? AND expires_at > unixepoch('subsec') * 1000 AND attempts < 5";
+  const args = [verificationId, campaign.id, email];
+  const attempt = db.prepare("UPDATE email_verifications SET attempts = attempts + 1 WHERE " + check + " AND digest <> ?").bind(...args, digest);
+  const remove = db.prepare("DELETE FROM reservations WHERE campaign_id = ? AND email = ? AND paid = 0 AND COALESCE(payment_url, '') = '' AND paid_receipt_id IS NULL AND pickup_at IS NULL AND NOT EXISTS (SELECT 1 FROM payment_receipts WHERE reservation_id = reservations.id) AND EXISTS (SELECT 1 FROM email_verifications WHERE " + check + " AND digest = ?)").bind(campaign.id, email, ...args, digest);
+  const consume = db.prepare("DELETE FROM email_verifications WHERE " + check + " AND digest = ?").bind(...args, digest);
+  const [, removed, verified] = await db.batch([attempt, remove, consume]);
+  if (!verified.meta.changes) return json({ error: "認証コードが違うか、期限が切れています。最新のメールをご確認ください。" }, 422);
+  if (!removed.meta.changes) return json({ error: "キャンセル可能な無料予約がありません。決済案内の準備後で未払いの場合はお問い合わせください。" }, 409);
+  return json({ cancelled: true });
+}
+
 async function saveSettings(request, db, campaign) {
   const body = await readBody(request);
   const goal = body?.reservation_goal;
@@ -293,11 +312,13 @@ async function handleRequest(request, env) {
   const project = url.searchParams.get("project");
   const id = url.searchParams.get("id");
   if ((pathname === "/api/campaign" && request.method === "GET") ||
-      (["/api/reservations", "/api/verify-email"].includes(pathname) && request.method === "POST")) {
+      (["/api/reservations", "/api/verify-email", "/api/cancel-code", "/api/cancel-reservation"].includes(pathname) && request.method === "POST")) {
     const campaign = await findCampaign(env, { artist, project });
     if (!campaign) return json({ error: "作品が見つかりません。" }, 404);
     if (pathname === "/api/campaign") return json(await publicData(env, campaign));
     if (pathname === "/api/verify-email") return startVerification(request, env, campaign);
+    if (pathname === "/api/cancel-code") return startVerification(request, env, campaign, true);
+    if (pathname === "/api/cancel-reservation") return cancelReservation(request, env, campaign);
     return reserve(request, env, campaign);
   }
 
