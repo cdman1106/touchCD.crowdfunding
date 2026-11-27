@@ -39,6 +39,7 @@ Node.js 22.13以上で `npm run dev` を実行し、表示されたURLを開き�
 
 - Gmail — `MAIL_PROVIDER=gmail`、送信元の `GMAIL_FROM`、Google CloudのOAuthクライアントの `GMAIL_CLIENT_ID` を設定します。 `GMAIL_CLIENT_SECRET` と `GMAIL_REFRESH_TOKEN` はシークレットに保存します。Gmail APIを有効にし、送信元と同じアカウントから `https://www.googleapis.com/auth/gmail.send` のオフラインアクセスを許可してリフレッシュトークンを発行します。
 - Resend — `MAIL_PROVIDER=resend`、`MAIL_FROM`（認証済みドメインのアドレス）を設定し、`RESEND_API_KEY` をシークレットに保存します。
+- Cloudflare Email Service — `wrangler.toml` の `EMAIL` 送信バインディングと `MAIL_PROVIDER=cloudflare`、`MAIL_FROM=noreply@mail.touchcd-crowdfunding.com` を使います。Cloudflareで `mail.touchcd-crowdfunding.com` を送信ドメインとして設定し、`EMAIL_VERIFICATION_SECRET` をシークレットに保存します。Workers FreeではCloudflareアカウントで認証済みの宛先に限り送信できます。一般の予約者へ送るにはWorkers PaidまたはResend/Gmailなど別の送信設定が必要です。
 
 無料予約ではメールに届く6桁のコードを使用します。コードは10分間有効で、一度使うと無効です。管理者が管理画面で「入金済み」を保存すると、認証済みアドレスに支払い完了メールを送ります。メールの送信に失敗した場合は入金記録を保持し、同じ予約から送信を再試行できます。
 
