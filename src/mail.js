@@ -9,6 +9,9 @@ function mailReady(env) {
   if (env.MAIL_PROVIDER === "gmail") {
     return Boolean(validEmail(asEmail(env.GMAIL_FROM)) && env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN);
   }
+  if (env.MAIL_PROVIDER === "cloudflare") {
+    return Boolean(env.EMAIL && validEmail(asEmail(env.MAIL_FROM)));
+  }
   return Boolean((!env.MAIL_PROVIDER || env.MAIL_PROVIDER === "resend") && env.RESEND_API_KEY && env.MAIL_FROM);
 }
 const intakeOpen = (env) => env.RESERVATIONS_OPEN === "1" && mailReady(env);
@@ -31,6 +34,17 @@ async function sendMail(env, to, subject, body, idempotencyKey, replyTo = "", at
   if (!mailReady(env)) return false;
   try {
     if (env.MAIL_PROVIDER === "gmail") return await sendGmail(env, to, subject, body, idempotencyKey, replyTo, attachments);
+    if (env.MAIL_PROVIDER === "cloudflare") {
+      await env.EMAIL.send({
+        from: env.MAIL_FROM,
+        to,
+        subject,
+        text: body,
+        ...(replyTo ? { replyTo } : {}),
+        ...(attachments.length ? { attachments: attachments.map(a => ({ filename: a.filename, content: a.content, type: "image/jpeg", disposition: "attachment" })) } : {}),
+      });
+      return true;
+    }
     const result = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
