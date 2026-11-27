@@ -5,7 +5,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/dev.mjs",
-    "deploy": "wrangler d1 migrations apply touchcd-reservations --remote && wrangler deploy"
+    "migrate": "wrangler d1 migrations apply touchcd-reservations --remote",
+    "deploy": "npm run migrate && wrangler deploy"
   },
   "devDependencies": { "wrangler": "4.165.0" },
   "engines": { "node": ">=22.13" }
