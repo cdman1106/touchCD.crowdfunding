@@ -359,59 +359,6 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
-  // BEGIN TEMPORARY SANDBOX QA -- no live Stripe credentials, no reservation writes.
-  if(pathname.startsWith("/api/sandbox-qa/")&&request.method==="GET"){
-    const input=pathname.slice("/api/sandbox-qa/".length);
-    if(!/^[a-f0-9]{64}$/.test(input))return json({error:"not found"},404);
-    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(input))),b=>b.toString(16).padStart(2,"0")).join("");
-    if(hash!=="ff83a255fab2037fb6817ee2b0b7b05330225dbbe6b88bf2b9b25ca5a35258af")return json({error:"not found"},404);
-    const db=env.DB;
-    await db.prepare("CREATE TABLE IF NOT EXISTS sandbox_qa_results(id TEXT PRIMARY KEY, stage TEXT, auth_ok INTEGER DEFAULT 0, checkout_ok INTEGER DEFAULT 0, expired_ok INTEGER DEFAULT 0, payment_ok INTEGER DEFAULT 0, decline_ok INTEGER DEFAULT 0, refund_ok INTEGER DEFAULT 0, methods TEXT, error_code TEXT)").run();
-    const claim=await db.prepare("INSERT OR IGNORE INTO sandbox_qa_results(id,stage) VALUES(?,'started')").bind(hash).run();
-    if(!claim.meta.changes)return json({error:"already used"},409);
-    let stage="key", checkout=null;
-    const key=env.STRIPE_TEST_SECRET_KEY;
-    const call=async(path,params,idempotency)=>{
-      if(typeof key!=="string"||!/^sk_test_/.test(key))throw Error("not_test_key");
-      const response=await fetch("https://api.stripe.com/v1/"+path,{method:params?"POST":"GET",headers:{Authorization:"Bearer "+key,...(params?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(idempotency?{"Idempotency-Key":idempotency}:{})},...(params?{body:new URLSearchParams(params)}:{}),signal:AbortSignal.timeout(12000)});
-      const data=await response.json();
-      if(!response.ok){const error=Error("stripe_http_"+response.status);error.stripeCode=data.error?.code;error.stripeParam=data.error?.param;error.stripeType=data.error?.type;error.stripeMessage=String(data.error?.message||"").replace(/(?:sk|rk|pk)_(?:test|live)_[A-Za-z0-9_]+/g,"[redacted]");throw error;}
-      return data;
-    };
-    const flag=async(column)=>{await db.prepare("UPDATE sandbox_qa_results SET "+column+"=1 WHERE id=?").bind(hash).run();};
-    const unique="touchcd-sandbox-qa-"+hash;
-    try{
-      if(typeof key!=="string"||!key.startsWith("sk_test_"))throw Error("not_test_key");
-      stage="account";
-      const account=await call("account");
-      if(account.id!=="acct_1UdUvZFZj6W6MV5A")throw Error("wrong_sandbox_account");
-      await flag("auth_ok");
-      stage="refund reconciliation";
-      const intents=await call("payment_intents?limit=20");
-      const matches=(intents.data||[]).filter(p=>p.livemode===false&&p.metadata?.touchcd_qa==="sandbox"&&p.description==="touchCD sandbox QA; no real money"&&p.amount===3500&&p.currency==="jpy"&&p.status==="succeeded");
-      if(matches.length!==1)throw Error("expected exactly one sandbox QA payment");
-      const p=matches[0];
-      await flag("payment_ok");
-      const list=await call("refunds?payment_intent="+encodeURIComponent(p.id)+"&limit=10");
-      const charge=await call("charges/"+encodeURIComponent(p.latest_charge));
-      const f=list.data?.[0];
-      const summary={refundCount:list.data?.length||0,refundStatus:f?.status||null,refundAmount:f?.amount??null,refundCurrency:f?.currency??null,refundTestMode:f?.livemode===false,matchingIntent:f?.payment_intent===p.id,chargeTestMode:charge.livemode===false,chargeRefunded:charge.refunded,chargeAmountRefunded:charge.amount_refunded,chargeCurrency:charge.currency};
-      await db.prepare("UPDATE sandbox_qa_results SET methods=? WHERE id=?").bind(JSON.stringify(summary),hash).run();
-      if(list.data?.length===1&&f?.livemode===false&&f.payment_intent===p.id&&f.amount===3500&&f.status==="succeeded"&&charge.livemode===false&&charge.currency==="jpy"&&charge.refunded&&charge.amount_refunded===3500)await flag("refund_ok");
-      stage="decline";
-      let declined=false;
-      try{await call("payment_intents",{amount:"3500",currency:"jpy",payment_method:"pm_card_chargeDeclined",confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox decline QA"},unique+"-decline");}catch(e){if(e.stripeCode==="card_declined")declined=true;else throw e;}
-      if(!declined)throw Error("decline_not_detected");
-      await flag("decline_ok");
-      await db.prepare("UPDATE sandbox_qa_results SET stage='complete' WHERE id=?").bind(hash).run();
-      return json({complete:true,live_charge:0});
-    }catch(e){
-      if(checkout?.livemode===false&&stage==="checkout"){try{await call("checkout/sessions/"+encodeURIComponent(checkout.id)+"/expire",{},unique+"-expire");}catch{}}
-      await db.prepare("UPDATE sandbox_qa_results SET stage=?,error_code=? WHERE id=?").bind(stage,[e.stripeCode||e.message,e.stripeType,e.stripeParam,e.stripeMessage].filter(Boolean).join(" / ").slice(0,400),hash).run();
-      return json({error:"sandbox test stopped",stage},503);
-    }
-  }
-  // END TEMPORARY SANDBOX QA
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
