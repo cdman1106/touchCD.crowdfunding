@@ -225,6 +225,7 @@ async function markPickedUp(request, db, campaign) {
   const result = await db.prepare(`
     UPDATE reservations SET pickup_at = ?
     WHERE id = ? AND campaign_id = ? AND paid = 1 AND pickup_at IS NULL AND fulfillment = 'pickup'
+      AND NOT EXISTS(SELECT 1 FROM delivery_changes d WHERE d.reservation_id=reservations.id)
       AND (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ? AND paid = 1)
         + COALESCE((SELECT offline_paid FROM campaign_settings WHERE campaign_id = ?), 0)
         >= COALESCE((SELECT paid_goal FROM campaign_settings WHERE campaign_id = ?), ?)
