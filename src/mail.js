@@ -179,7 +179,7 @@ function receiptText(campaign, quantity, code, entry = {}) {
   const shipping = entry.fulfillment === "shipping";
   const delivery = shipping
     ? [`受取方法：自宅配送（送料 ${amount(entry.shipping_fee)}）`, `発送案内：${campaign.shippingNote || "製造成立後にご案内します。"}`, `配送方法：${postalDeliveryNote}`]
-    : ["製造が決まった場合、当日はこの支払い完了メールの画面を会場スタッフにお見せください。番号を覚える必要はありません。", `受取コード：${code}`, `受取案内：${campaign.pickup}`];
+    : ["製造が決まった場合、当日はこの支払い完了メールの画面を会場スタッフにお見せください。番号を覚える必要はありません。", `受取コード：${code}`, `受取案内：${campaign.pickup}`, "お客様都合で会場受取当日に受け取れない場合、国内配送への変更手数料1,000円＋送料500円（合計1,500円・税込／注文）が別途必要です。主催者・当方の事情による変更には変更手数料はかかりません。"];
   return [
     "お支払いを確認しました。",
 
