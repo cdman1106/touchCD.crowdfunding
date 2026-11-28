@@ -225,8 +225,11 @@ async function markPickedUp(request, db, campaign) {
   const result = await db.prepare(`
     UPDATE reservations SET pickup_at = ?
     WHERE id = ? AND campaign_id = ? AND paid = 1 AND pickup_at IS NULL AND fulfillment = 'pickup'
-  `).bind(new Date().toISOString(), form.id, campaign.id).run();
-  return result.meta.changes ? json({ saved: true }) : json({ error: "受取済み、入金未確認、または予約が見つかりません。" }, 409);
+      AND (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ? AND paid = 1)
+        + COALESCE((SELECT offline_paid FROM campaign_settings WHERE campaign_id = ?), 0)
+        >= COALESCE((SELECT paid_goal FROM campaign_settings WHERE campaign_id = ?), ?)
+  `).bind(new Date().toISOString(), form.id, campaign.id, campaign.id, campaign.id, campaign.id, defaults(campaign).paid_goal).run();
+  return result.meta.changes ? json({ saved: true }) : json({ error: "製造成立前、受取済み、入金未確認、または予約が見つかりません。" }, 409);
 }
 
 async function markShipped(request, env, campaign) {

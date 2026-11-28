@@ -4,12 +4,21 @@ compatibility_date = "2026-01-01"
 keep_vars = true
 preview_urls = false
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+invocation_logs = false
+
 [build]
 command = "npm run build"
 
 [vars]
 SHOW_DEMO_CAMPAIGNS = "0"
 MAIL_PROVIDER = "cloudflare"
+ADMIN_EMAIL = "cdman1106@gmail.com"
 MAIL_FROM = "noreply@send.touchcd-crowdfunding.com"
 
 [[d1_databases]]

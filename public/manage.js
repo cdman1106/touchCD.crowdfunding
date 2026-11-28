@@ -8,6 +8,7 @@ const status = $("admin-status");
 const labels = { draft: "下書き", unlisted: "リンク限定", listed: "一覧掲載" };
 const pathFor = ({ artistSlug, slug }) => `/artists/${artistSlug}/${slug}`;
 let key = "";
+let adminChallenge = "";
 let projects = [];
 let reservations = [];
 let selected = null;
@@ -268,7 +269,7 @@ async function load(id) {
   $("mail-note").hidden = result.mailConfigured;
   $("workspace").hidden = false;
   login.hidden = true;
-  $("admin-key").value = "";
+  $("admin-code").value = "";
   await select(id ?? projects[0]?.id ?? null);
 }
 
@@ -280,10 +281,27 @@ function showError(error) {
   }
 }
 
-login.addEventListener("submit", (event) => {
+async function adminLoginAction(action, body = {}) {
+  const response = await fetch("/api/admin-login/"+action,{method:"POST",headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},body:JSON.stringify(body)});
+  const result = await response.json();
+  if (!response.ok) throw Object.assign(new Error(result.error),{status:response.status});
+  return result;
+}
+$("send-admin-code").addEventListener("click",async()=>{
+  const button=$("send-admin-code");button.disabled=true;
+  try {const result=await adminLoginAction("request");adminChallenge=result.id;status.textContent="管理者メールに認証コードを送信しました。";$("admin-code").focus();}
+  catch(error){showError(error);}finally{button.disabled=false;}
+});
+login.addEventListener("submit",async event=>{
   event.preventDefault();
-  key = $("admin-key").value.trim();
-  load().catch(showError);
+  if (!adminChallenge) {status.textContent="先に認証コードを送信してください。";return;}
+  const button=login.querySelector('button[type="submit"]');button.disabled=true;
+  try {const result=await adminLoginAction("verify",{id:adminChallenge,code:$("admin-code").value.trim()});key=result.token;adminChallenge="";await load();status.textContent="ログインしました。";}
+  catch(error){showError(error);}finally{button.disabled=false;}
+});
+$("admin-logout").addEventListener("click",async()=>{
+  try {await adminLoginAction("logout");}catch(error){status.textContent=error.message;}
+  finally{key="";projects=[];reservations=[];selected=null;$("workspace").hidden=true;login.hidden=false;status.textContent="ログアウトしました。";}
 });
 $("new-project").addEventListener("click", () => {
   select(null).catch(showError);

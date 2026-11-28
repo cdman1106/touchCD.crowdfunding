@@ -55,10 +55,60 @@ async function publicData(env, campaign) {
   return { ...data, status: statusFor(data) };
 }
 
+
+const adminEmail = env => asEmail(env.ADMIN_EMAIL);
+async function requestAdminCode(request, env) {
+  if (!env.DB || !mailReady(env) || !validEmail(adminEmail(env))) return json({error:"管理者ログインの設定が必要です。"},503);
+  const now = Date.now(), db = env.DB;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const ipKey = await emailDigest(env, ["admin-login", "ip", ip]);
+  const globalKey = await emailDigest(env, ["admin-login", "global"]);
+  for (const [key, limit] of [[ipKey, 3], [globalKey, 6]]) {
+    const result = await throttle(db,key,now,60*60_000,limit).run();
+    if (!result.meta.changes) return json({error:"送信回数が上限に達しました。時間をおいてください。"},429);
+  }
+  const id = crypto.randomUUID(), code = randomCode() + randomCode().slice(0,2);
+  const digest = await emailDigest(env, ["admin-code", id, code]);
+  await db.batch([
+    db.prepare("DELETE FROM admin_challenges WHERE expires_at <= ?").bind(now),
+    db.prepare("INSERT INTO admin_challenges(id,digest,expires_at,attempts) VALUES (?,?,?,0)").bind(id,digest,now+10*60_000),
+    db.prepare("DELETE FROM admin_sessions WHERE expires_at <= ?").bind(now)
+  ]);
+  const sent = await sendMail(env,adminEmail(env),"【touchCD】管理者ログイン認証コード","管理者ログインコード："+code+"\n有効期限は10分です。第三者には教えないでください。", "admin-login/"+id);
+  if (!sent) {
+    await db.prepare("DELETE FROM admin_challenges WHERE id = ?").bind(id).run();
+    return json({error:"認証メールを送信できませんでした。"},503);
+  }
+  return json({id});
+}
+async function verifyAdminCode(request,env) {
+  if (!env.DB || !mailReady(env) || !validEmail(adminEmail(env))) return json({error:"ログインできません。"},503);
+  const body=await readBody(request);
+  if (!uuidLike(body?.id) || typeof body.code !== "string" || !/^\d{8}$/.test(body.code)) return json({error:"8桁の認証コードをご確認ください。"},400);
+  const db=env.DB,now=Date.now(),digest=await emailDigest(env,["admin-code",body.id,body.code]);
+  const token=crypto.randomUUID()+crypto.randomUUID();
+  const sessionDigest=await emailDigest(env,["admin-session",token]);
+  const check="id = ? AND expires_at > ? AND attempts < 5";
+  const [failed, saved] = await db.batch([
+    db.prepare("UPDATE admin_challenges SET attempts = attempts + 1 WHERE "+check+" AND digest <> ?").bind(body.id,now,digest),
+    db.prepare("INSERT INTO admin_sessions(digest,expires_at) SELECT ?,? WHERE EXISTS (SELECT 1 FROM admin_challenges WHERE "+check+" AND digest = ?)").bind(sessionDigest,now+2*60*60_000,body.id,now,digest),
+    db.prepare("DELETE FROM admin_challenges WHERE "+check+" AND digest = ?").bind(body.id,now,digest)
+  ]);
+  if (!saved.meta.changes) return json({error:"認証コードが違うか期限切れです。"},401);
+  return json({token});
+}
+
 async function authorized(request, env) {
   const token = env.ADMIN_TOKEN;
   const header = request.headers.get("Authorization") || "";
-  if (!token || token.length < 24 || !header.startsWith("Bearer ") || header.length > 1024) return false;
+  if (!header.startsWith("Bearer ") || header.length > 1024) return false;
+  const presented = header.slice(7);
+  if (env.DB && mailReady(env) && /^[a-f0-9-]{72}$/.test(presented)) {
+    const digest = await emailDigest(env, ["admin-session",presented]);
+    const session = await env.DB.prepare("SELECT 1 FROM admin_sessions WHERE digest = ? AND expires_at > ?").bind(digest,Date.now()).first();
+    if (session) return true;
+  }
+  if (!token || token.length < 24) return false;
   const encoder = new TextEncoder();
   const [actual, expected] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(header.slice(7))),
@@ -155,7 +205,8 @@ async function reserve(request, env, campaign) {
     }
     return json({ error: "受付が終了したか、同じメールアドレスで受付済みです。変更の際はお問い合わせください。" }, 409);
   }
-  return json({ id }, 201);
+  const confirmationSent = await sendMail(env,email,"【touchCD】無料予約完了", [name+" 様","無料予約を受け付けました。現時点のお支払いは0円です。","作品："+campaign.title,"予約番号："+id.slice(0,8).toUpperCase(),"予約個数："+quantity+"個","受取方法："+(shipping?"自宅配送":"会場受取"),"成立条件を満たした場合は、このメールアドレスに支払い案内を送ります。","無料予約のキャンセルは予約ページからメール認証で行えます。","予約ページ："+new URL("/artists/"+campaign.artistSlug+"/"+campaign.slug,request.url).href].join("\n\n"),"reservation-confirmation/"+id);
+  return json({ id, confirmationSent }, 201);
 }
 
 async function cancelReservation(request, env, campaign) {
@@ -174,7 +225,8 @@ async function cancelReservation(request, env, campaign) {
   const [, removed, verified] = await db.batch([attempt, remove, consume]);
   if (!verified.meta.changes) return json({ error: "認証コードが違うか、期限が切れています。最新のメールをご確認ください。" }, 422);
   if (!removed.meta.changes) return json({ error: "キャンセル可能な無料予約がありません。決済案内の準備後で未払いの場合はお問い合わせください。" }, 409);
-  return json({ cancelled: true });
+  const confirmationSent = await sendMail(env,email,"【touchCD】無料予約キャンセル完了","作品："+campaign.title+"\n無料予約をキャンセルしました。お支払いは発生していません。","reservation-cancel/"+verificationId);
+  return json({ cancelled: true, confirmationSent });
 }
 
 async function saveSettings(request, db, campaign) {
@@ -317,6 +369,15 @@ async function handleRequest(request, env) {
   if (!pathname.startsWith("/api/")) return assetResponse(request, "/", notFound(request), 404);
   if (request.method !== "GET" && request.headers.get("Origin") !== origin) return json({ error: "操作を確認できません。" }, 403);
   if (pathname === "/api/consultation" && request.method === "POST") return submitConsultation(request, env);
+  if (pathname === "/api/admin-login/request" && request.method === "POST") return requestAdminCode(request,env);
+  if (pathname === "/api/admin-login/verify" && request.method === "POST") return verifyAdminCode(request,env);
+  if (pathname === "/api/admin-login/logout" && request.method === "POST") {
+    if (env.DB && mailReady(env)) {
+      const token = (request.headers.get("Authorization") || "").slice(7);
+      if (/^[a-f0-9-]{72}$/.test(token)) await env.DB.prepare("DELETE FROM admin_sessions WHERE digest = ?").bind(await emailDigest(env,["admin-session",token])).run();
+    }
+    return json({loggedOut:true});
+  }
   const artist = url.searchParams.get("artist");
   const project = url.searchParams.get("project");
   const id = url.searchParams.get("id");
@@ -431,7 +492,7 @@ export default {
       }
       return await handleRequest(request, env);
     } catch (error) {
-      console.error("Request failed", error instanceof Error ? error.message : "Unknown error");
+      console.error("Request failed", error instanceof Error ? error.name : "Unknown error");
       return json({ error: "一時的に利用できません。時間をおいてお試しください。" }, 503);
     }
   },

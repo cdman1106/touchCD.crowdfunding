@@ -14,12 +14,14 @@
   <h1>作品と予約の管理</h1>
   <p id="admin-status" class="admin-status" role="status"></p>
   <form id="login" class="admin-card" hidden>
-    <label>管理キー<input type="password" id="admin-key" required autocomplete="off"></label>
-    <button type="submit" class="primary">開く</button>
+    <p>登録済みの管理者メールアドレスに認証コードを送信します。</p>
+    <button type="button" id="send-admin-code" class="primary">認証コードを送信</button>
+    <label>8桁の認証コード<input id="admin-code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" required autocomplete="one-time-code"></label>
+    <button type="submit" class="primary">ログイン</button>
   </form>
   <div class="admin-layout" id="workspace" hidden>
     <aside class="admin-card admin-side">
-      <div class="admin-heading"><h2>作品一覧</h2><button type="button" class="small-button" id="new-project">＋ 新規作成</button></div>
+      <div class="admin-heading"><h2>作品一覧</h2><button type="button" id="admin-logout" class="small-button">ログアウト</button><button type="button" class="small-button" id="new-project">＋ 新規作成</button></div>
       <ul id="project-list" class="project-list"></ul>
     </aside>
     <div class="admin-content">

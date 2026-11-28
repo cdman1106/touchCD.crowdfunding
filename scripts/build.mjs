@@ -60,6 +60,7 @@ const initialSchema = database.prepare(`SELECT sql FROM sqlite_schema
   WHERE type IN ('table', 'index') AND sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY rowid`).all()
   .map(({ sql }) => sql.replace(/^CREATE (TABLE|INDEX) /i, "CREATE $1 IF NOT EXISTS "));
 initialSchema.push("CREATE TABLE IF NOT EXISTS pickup_numbers (reservation_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, number INTEGER NOT NULL CHECK (number > 0), UNIQUE (campaign_id, number))");
+initialSchema.push("CREATE TABLE IF NOT EXISTS admin_challenges (id TEXT PRIMARY KEY, digest TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0)", "CREATE TABLE IF NOT EXISTS admin_sessions (digest TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)");
 database.close();
 await mkdir(output, { recursive: true });
 await writeFile(new URL("index.js", output), `const siteAssets = ${JSON.stringify(Object.fromEntries(files))};\nconst initialSchema = ${JSON.stringify(initialSchema)};\nconst initialMigrations = ${JSON.stringify(initialMigrations)};\nconst releaseMigration = ${JSON.stringify(releaseMigration)};\nconst releaseColumns = ${JSON.stringify(releaseColumns)};\n${worker}`);
