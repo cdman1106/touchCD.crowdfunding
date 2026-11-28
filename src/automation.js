@@ -57,7 +57,14 @@ async function reconcileForAutomation(env,o){
     if(!result.ok)return "review";
     return "paid";
   }
-  if(s.status==="expired"&&s.payment_status==="unpaid")return "clear";
+  if(s.payment_status==="unpaid"&&s.payment_intent){
+    const intent=await stripeCall(env,"payment_intents/"+encodeURIComponent(s.payment_intent));
+    if(!intent.livemode||intent.currency!=="jpy"||intent.amount!==o.unit_price*o.quantity+o.shipping_fee)return "review";
+    if(intent.status==="canceled")return "clear";
+    if(s.status==="expired"&&intent.status==="requires_payment_method")return "clear";
+    return "waiting";
+  }
+  if(s.status==="expired"&&s.payment_status==="unpaid"&&!s.payment_intent)return "clear";
   return "waiting";
 }
 async function automateGuidesAndReminders(env,campaign,state,deadline){
