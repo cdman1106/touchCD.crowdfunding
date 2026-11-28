@@ -49,3 +49,12 @@
   </form>
   <p id="cancel-result" role="status" aria-live="polite"></p>
 </dialog>
+
+<dialog id="lookup-dialog" aria-labelledby="lookup-title">
+  <div class="dialog-head"><h2 id="lookup-title">予約確認・お支払い</h2><button type="button" class="close" id="lookup-close" aria-label="閉じる">×</button></div>
+  <p>予約時のメールアドレスで認証すると、この作品の予約状況と決済リンクを確認できます。会員登録は不要です。</p>
+  <form id="lookup-email-form"><label>メールアドレス<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button class="primary" type="submit">認証コードを送る</button></form>
+  <form id="lookup-code-form" hidden><label>6桁の認証コード<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label><button class="primary" type="submit">予約を確認する</button></form>
+  <p id="lookup-message" role="status" aria-live="polite"></p><div id="lookup-results"></div>
+  <button type="button" id="lookup-restart" class="secondary">メールアドレス変更・コード再送</button>
+</dialog>
