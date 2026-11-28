@@ -359,45 +359,40 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
-  // Temporary one-use sandbox verification; no live Stripe credentials or real reservation writes.
+  // Temporary one-use sandbox-only verification.
   if(pathname.startsWith("/api/sandbox-test/")&&request.method==="GET"){
     const token=pathname.slice("/api/sandbox-test/".length);
     if(!/^[a-f0-9]{64}$/.test(token))return json({error:"not found"},404);
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,"0")).join("");
-    if(hash!=="d6d61185672fa40a2638814262dfd78bd1a708322d8aae6fe821de438f556e7a")return json({error:"not found"},404);
+    if(hash!=="1be01bbd5e8268ec1fdb48616e55e4611323ab40ec74ee08f7a70fd583831612")return json({error:"not found"},404);
     const db=env.DB,key=env.STRIPE_TEST_SECRET_KEY;
     if(typeof key!=="string"||!key.startsWith("sk_test_"))return json({error:"test key required"},503);
-    const claim=await db.prepare("INSERT OR IGNORE INTO stripe_sandbox_checks(id) VALUES(?)").bind(hash).run();
+    await db.prepare("CREATE TABLE IF NOT EXISTS stripe_sandbox_checkout_fixture (id TEXT PRIMARY KEY, session_id TEXT, checkout_url TEXT, payment_ok INTEGER NOT NULL DEFAULT 0, refund_ok INTEGER NOT NULL DEFAULT 0, error_stage TEXT)").run();
+    const claim=await db.prepare("INSERT OR IGNORE INTO stripe_sandbox_checkout_fixture(id) VALUES(?)").bind(hash).run();
     if(!claim.meta.changes)return json({error:"already used"},409);
-    const errors=[];
+    const testEnv={STRIPE_SECRET_KEY:key};
+    const account=await stripeCall(testEnv,"account");
+    if(account.id!=="acct_1UdUvZFZj6W6MV5A")return json({error:"wrong sandbox"},503);
     const call=async(path,params,idempotency)=>{
-      const res=await fetch("https://api.stripe.com/v1/"+path,{method:params?"POST":"GET",headers:{Authorization:"Bearer "+key,...(params?{"Content-Type":"application/x-www-form-urlencoded","Idempotency-Key":idempotency+"-"+hash}:{})},...(params?{body:new URLSearchParams(params)}:{}),signal:AbortSignal.timeout(12000)});
+      const res=await fetch("https://api.stripe.com/v1/"+path,{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/x-www-form-urlencoded","Idempotency-Key":idempotency+"-"+hash},body:new URLSearchParams(params),signal:AbortSignal.timeout(12000)});
       const data=await res.json();
-      if(!res.ok){const safe=x=>typeof x==="string"&&/^[a-zA-Z0-9_.\[\]-]{1,100}$/.test(x)?x:"none";throw Error([res.status,safe(data.error?.type),safe(data.error?.code),safe(data.error?.param)].join("/"));}
-      return data;
+      return {status:res.status,data};
     };
-    const mark=async(name)=>{if(!["account_ok","checkout_ok","payment_ok","refund_ok","decline_ok"].includes(name))throw Error("invalid stage");await db.prepare("UPDATE stripe_sandbox_checks SET "+name+"=1 WHERE id=?").bind(hash).run();};
-    const report=(stage,e)=>{const msg=String(e?.message||"unknown");errors.push(stage+":"+(/^[a-zA-Z0-9_./\[\] -]{1,180}$/.test(msg)?msg:"unexpected error"));};
-    try{const account=await call("account");if(account.id!=="acct_1UdUvZFZj6W6MV5A")throw Error("wrong sandbox");await mark("account_ok");}catch(e){report("account",e);await db.prepare("UPDATE stripe_sandbox_checks SET error_stage=? WHERE id=?").bind(errors.join(";"),hash).run();return json({error:"account check failed"},503);}
-    let session;
+    let error=null;
     try{
-      session=await call("checkout/sessions",{mode:"payment","excluded_payment_method_types[0]":"konbini","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD sandbox fixture","line_items[0][quantity]":"1",success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/",expires_at:String(Math.floor(Date.now()/1000)+1860),"adaptive_pricing[enabled]":"false"},"sandbox-checkout");
-      if(session.livemode!==false||session.amount_total!==3000||session.currency!=="jpy"||session.status!=="open")throw Error("unexpected checkout");
-      const closed=await call("checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"sandbox-expire");
-      if(closed.livemode!==false||closed.status!=="expired"||closed.payment_status!=="unpaid")throw Error("checkout expiry");
-      await mark("checkout_ok");
-    }catch(e){report("checkout",e);if(session?.id&&session.livemode===false){try{await call("checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"sandbox-expire");}catch{}}}
-    let pi;
-    try{pi=await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_visa",confirm:"true",description:"touchCD isolated sandbox test 3000 + 500"},"sandbox-payment");if(pi.livemode!==false||pi.status!=="succeeded"||pi.amount_received!==3500||pi.currency!=="jpy")throw Error("unexpected payment");await mark("payment_ok");}catch(e){report("payment",e);}
-    if(pi?.livemode===false&&pi.status==="succeeded"){
-      try{const refund=await call("refunds",{payment_intent:pi.id,amount:"3500"},"sandbox-refund");if(refund.amount!==3500||refund.currency!=="jpy"||refund.payment_intent!==pi.id||refund.status!=="succeeded")throw Error("refund not complete");await mark("refund_ok");}catch(e){report("refund",e);}
-    }
-    try{
-      const response=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/x-www-form-urlencoded","Idempotency-Key":"sandbox-decline-"+hash},body:new URLSearchParams({amount:"3000",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_chargeDeclined",confirm:"true"}),signal:AbortSignal.timeout(12000)});
-      const declined=await response.json();if(response.status!==402||declined.error?.code!=="card_declined"||declined.error?.payment_intent?.livemode!==false)throw Error("decline not verified "+response.status);await mark("decline_ok");
-    }catch(e){report("decline",e);}
-    await db.prepare("UPDATE stripe_sandbox_checks SET error_stage=? WHERE id=?").bind(errors.length?errors.join(";"):null,hash).run();
-    return json({sandbox:true,errors,real_charge:0});
+      const pm=await call("payment_methods",{type:"card","card[token]":"tok_visa"},"sandbox-method");
+      if(pm.status!==200||pm.data.livemode!==false||!pm.data.id?.startsWith("pm_"))throw Error("payment method creation HTTP "+pm.status);
+      const p=await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:pm.data.id,confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox verification 3000 + 500"},"sandbox-intent");
+      if(p.status!==200||p.data.livemode!==false||p.data.status!=="succeeded"||p.data.amount_received!==3500)throw Error("payment confirmation HTTP "+p.status);
+      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET payment_ok=1 WHERE id=?").bind(hash).run();
+      const refund=await stripeCall(testEnv,"refunds",{payment_intent:p.data.id,amount:"3500"},"sandbox-refund-"+hash);
+      if(refund.amount!==3500||refund.status!=="succeeded"||refund.payment_intent!==p.data.id)throw Error("refund not complete");
+      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET refund_ok=1 WHERE id=?").bind(hash).run();
+    }catch(e){error=String(e?.message||"unknown").slice(0,120);}
+    const session=await stripeCall(testEnv,"checkout/sessions",{mode:"payment","excluded_payment_method_types[0]":"konbini","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD テスト商品（実際の請求なし）","line_items[0][quantity]":"1","line_items[1][price_data][currency]":"jpy","line_items[1][price_data][unit_amount]":"500","line_items[1][price_data][product_data][name]":"テスト送料","line_items[1][quantity]":"1",success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/","adaptive_pricing[enabled]":"false"},"sandbox-interactive-"+hash);
+    if(session.livemode!==false||session.amount_total!==3500||session.currency!=="jpy"||session.status!=="open"||!session.id.startsWith("cs_test_")||!session.url?.startsWith("https://checkout.stripe.com/"))return json({error:"unexpected session"},503);
+    await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET session_id=?,checkout_url=?,error_stage=? WHERE id=?").bind(session.id,session.url,error,hash).run();
+    return json({sandbox:true,checkout:true,real_charge:0});
   }
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
