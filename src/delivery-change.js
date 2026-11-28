@@ -7,7 +7,7 @@ async function issueDeliveryChange(request,env,campaign){
   if(!uuidLike(body?.id)||body?.confirmed!==true)return json({error:"当日受取がなかったことと購入者の配送希望を確認してください。"},400);
   if(isIzumiCampaign(campaign)&&Date.now()<Date.parse("2027-02-25T00:00:00+09:00"))return json({error:"ライブ終了後から配送変更できます。"},409);
   const state=await publicData(env,campaign);
-  if(state.outcome!=="succeeded"&&state.paid<state.paidGoal)return json({error:"製造成立後に利用できます。"},409);
+  if(state.outcome==="failed"||(state.outcome!=="succeeded"&&state.paid<state.paidGoal))return json({error:"製造成立後に利用できます。"},409);
   const r=await db.prepare("SELECT * FROM reservations WHERE id=? AND campaign_id=? AND paid=1 AND fulfillment='pickup' AND pickup_at IS NULL AND email_verified_at IS NOT NULL").bind(body.id,campaign.id).first();
   if(!r)return json({error:"入金済み・未受取の会場受取予約がありません。"},409);
   const token=crypto.randomUUID()+crypto.randomUUID(),deadline=automationNow()+7*86400;
