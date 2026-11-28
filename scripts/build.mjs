@@ -35,7 +35,7 @@ const files = await Promise.all(Object.entries(paths).map(async ([route, name]) 
   return [route, name.endsWith(".webp") ? {base64: bytes.toString("base64")} : bytes.toString("utf8")];
 }));
 const output = new URL("../dist/server/", import.meta.url);
-const modules = await Promise.all(["catalog", "pages", "mail", "payment-settings", "stripe", "worker"].map((name) =>
+const modules = await Promise.all(["catalog", "pages", "mail", "payment-settings", "stripe", "automation", "worker"].map((name) =>
   readFile(new URL(`../src/${name}.js`, import.meta.url), "utf8")));
 const worker = modules.join("\n");
 // These schema-only migrations can also initialize new databases at runtime.
