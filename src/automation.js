@@ -62,7 +62,7 @@ async function reconcileForAutomation(env,o){
 async function automateGuidesAndReminders(env,campaign,state,deadline){
   const db=env.DB,now=automationNow();
   if(state.reserved>=state.reservationGoal&&deadline-now>1860){
-    const entries=await db.prepare("SELECT r.id FROM reservations r LEFT JOIN stripe_orders o ON o.reservation_id=r.id LEFT JOIN automation_mail m ON m.reservation_id=r.id AND m.kind='guide' WHERE r.campaign_id=? AND r.paid=0 AND r.email_verified_at IS NOT NULL AND (COALESCE(r.payment_url,'')='' OR o.reservation_id IS NOT NULL) AND o.guide_sent_at IS NULL AND (m.state IS NULL OR (m.state='failed' AND m.attempts<5 AND m.updated_at<=?)) ORDER BY r.created_at LIMIT 8").bind(campaign.id,now-600).all();
+    const entries=await db.prepare("SELECT r.id FROM reservations r LEFT JOIN stripe_orders o ON o.reservation_id=r.id LEFT JOIN automation_mail m ON m.reservation_id=r.id AND m.kind='guide' WHERE r.campaign_id=? AND r.paid=0 AND r.email_verified_at IS NOT NULL AND (COALESCE(r.payment_url,'')='' OR o.reservation_id IS NOT NULL) AND o.guide_sent_at IS NULL AND (m.state IS NULL OR m.state='sent' OR (m.state='failed' AND m.attempts<5 AND m.updated_at<=?)) ORDER BY r.created_at LIMIT 8").bind(campaign.id,now-600).all();
     for(const entry of entries.results){
       const req=new Request(stripeOrigin+"/api/manage/stripe-guide",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:entry.id})});
       await issueStripeGuide(req,env,campaign);
@@ -121,7 +121,7 @@ async function refundAutomationOrder(env,o){
   const intent=await stripeCall(env,"payment_intents/"+encodeURIComponent(o.payment_intent));
   if(!intent.livemode||intent.status!=="succeeded"||intent.currency!=="jpy"||intent.amount_received!==expected||typeof intent.latest_charge!=="string")return "review";
   const charge=await stripeCall(env,"charges/"+encodeURIComponent(intent.latest_charge));
-  if(charge.disputed||charge.payment_intent!==o.payment_intent||charge.amount!==expected||charge.currency!=="jpy")return "review";
+  if(!charge.livemode||charge.disputed||charge.payment_intent!==o.payment_intent||charge.amount!==expected||charge.currency!=="jpy")return "review";
   const existing=await stripeCall(env,"refunds?payment_intent="+encodeURIComponent(o.payment_intent)+"&limit=100");
   if(existing.has_more||!Array.isArray(existing.data))return "review";
   let refund;
@@ -147,6 +147,8 @@ async function automateOutcome(env,campaign,config){
   if(config.outcome==="failed"&&config.refunds_enabled){
     const orders=await db.prepare("SELECT o.*,r.paid,r.pickup_at,r.quantity AS current_quantity,r.shipping_fee AS current_shipping_fee FROM stripe_orders o JOIN reservations r ON r.id=o.reservation_id LEFT JOIN automation_refunds f ON f.reservation_id=o.reservation_id WHERE o.campaign_id=? AND r.paid=1 AND (f.status IS NULL OR f.status IN ('pending','requires_action','succeeded')) ORDER BY COALESCE(f.updated_at,0) LIMIT 4").bind(campaign.id).all();
     for(const o of orders.results){
+      const latest=await automationState(db,campaign.id);
+      if(!latest?.enabled||!latest.refunds_enabled||latest.outcome!=="failed")break;
       const result=await refundAutomationOrder(env,o);
       if(result==="review"){
         await db.prepare("INSERT INTO automation_refunds(reservation_id,status,amount,updated_at) VALUES(?,'review',?,?) ON CONFLICT(reservation_id) DO UPDATE SET status='review',updated_at=excluded.updated_at").bind(o.reservation_id,o.unit_price*o.quantity+o.shipping_fee,now).run();
