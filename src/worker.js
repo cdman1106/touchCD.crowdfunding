@@ -359,6 +359,39 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
+  // Temporary, one-use smoke test; no charge or reservation writes.
+  if(pathname.startsWith("/api/diagnostic/")&&request.method==="GET"){
+    const value=pathname.slice("/api/diagnostic/".length);
+    if(!/^[a-f0-9]{64}$/.test(value))return json({error:"not found"},404);
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,"0")).join("");
+    if(hash!=="091fdaaed96a5cab94bdb0d243af92f75188dae6c3b9a2d0eaa5a8d849edd4ec")return json({error:"not found"},404);
+    const db=env.DB;
+    await db.prepare("CREATE TABLE IF NOT EXISTS payment_smoke_test (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, api_ok INTEGER NOT NULL DEFAULT 0, checkout_ok INTEGER NOT NULL DEFAULT 0, expired_ok INTEGER NOT NULL DEFAULT 0, webhook_ok INTEGER NOT NULL DEFAULT 0, error_stage TEXT)").run();
+    const claimed=await db.prepare("INSERT OR IGNORE INTO payment_smoke_test(id,created_at) VALUES(?,?)").bind(hash,Date.now()).run();
+    if(!claimed.meta.changes)return json({error:"already used"},409);
+    let stage="configuration", session;
+    try{
+      if(!stripeReady(env))throw Error("configuration");
+      stage="api";
+      const list=await stripeCall(env,"checkout/sessions?limit=1");
+      if(list.object!=="list"||!Array.isArray(list.data))throw Error("api response");
+      await db.prepare("UPDATE payment_smoke_test SET api_ok=1 WHERE id=?").bind(hash).run();
+      stage="checkout";
+      const params={mode:"payment","excluded_payment_method_types[0]":"konbini","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD connection diagnostic - do not pay","line_items[0][quantity]":"1","metadata[touchcd_smoke_test]":hash,success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/",expires_at:String(Math.floor(Date.now()/1000)+1860),"adaptive_pricing[enabled]":"false"};
+      session=await stripeCall(env,"checkout/sessions",params,"touchcd-smoke-"+hash);
+      if(!session.livemode||session.status!=="open"||session.amount_total!==3000||session.currency!=="jpy"||session.payment_status!=="unpaid")throw Error("unexpected checkout");
+      await db.prepare("UPDATE payment_smoke_test SET checkout_ok=1 WHERE id=?").bind(hash).run();
+      stage="expire";
+      const closed=await stripeCall(env,"checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"touchcd-smoke-expire-"+hash);
+      if(closed.status!=="expired"||closed.payment_status!=="unpaid")throw Error("expiry");
+      await db.prepare("UPDATE payment_smoke_test SET expired_ok=1 WHERE id=?").bind(hash).run();
+      return json({api:true,checkout:true,expired:true,charged:false,methods:session.payment_method_types});
+    }catch(e){
+      if(session?.id&&stage!=="expire"){try{await stripeCall(env,"checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"touchcd-smoke-expire-"+hash);}catch{}}
+      await db.prepare("UPDATE payment_smoke_test SET error_stage=? WHERE id=?").bind(stage,hash).run();
+      return json({error:"diagnostic failed",stage},503);
+    }
+  }
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
