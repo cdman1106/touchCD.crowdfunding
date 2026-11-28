@@ -229,6 +229,25 @@ async function cancelReservation(request, env, campaign) {
   return json({ cancelled: true, confirmationSent });
 }
 
+async function lookupReservations(request, env, campaign) {
+  if (campaign.demo || !env.DB || !mailReady(env)) return json({error:"現在予約確認を利用できません。"},503);
+  const body=await readBody(request),email=asEmail(body?.email),{verificationId,code}=body||{};
+  if(!validEmail(email)||!uuidLike(verificationId)||typeof code!=="string"||!/^\d{6}$/.test(code))return json({error:"メールアドレスと6桁の認証コードをご確認ください。"},400);
+  const db=env.DB,digest=await emailDigest(env,["lookup",campaign.id,verificationId,email,code]);
+  const check="id = ? AND campaign_id = ? AND email = ? AND expires_at > unixepoch('subsec') * 1000 AND attempts < 5";
+  const args=[verificationId,campaign.id,email];
+  const attempt=db.prepare("UPDATE email_verifications SET attempts=attempts+1 WHERE "+check+" AND digest<>?").bind(...args,digest);
+  const select=db.prepare("SELECT r.quantity,r.paid,r.fulfillment,r.shipping_fee,r.pickup_at,o.unit_price,o.deadline,o.token,o.guide_sent_at FROM reservations r LEFT JOIN stripe_orders o ON o.reservation_id=r.id WHERE r.campaign_id=? AND r.email=? AND EXISTS (SELECT 1 FROM email_verifications WHERE "+check+" AND digest=?) ORDER BY r.created_at DESC LIMIT 100").bind(campaign.id,email,...args,digest);
+  const consume=db.prepare("DELETE FROM email_verifications WHERE "+check+" AND digest=?").bind(...args,digest);
+  const [,rows,verified]=await db.batch([attempt,select,consume]);
+  if(!verified.meta.changes)return json({error:"認証コードが違うか、有効期限が切れています。"},422);
+  const now=Date.now()/1000;
+  return json({reservations:rows.results.map(r=>{
+    const eligible=!r.paid&&stripeReady(env)&&r.guide_sent_at&&r.deadline>now&&/^[a-f0-9-]{72}$/.test(r.token||"");
+    return {quantity:r.quantity,fulfillment:r.fulfillment,paid:Boolean(r.paid),received:Boolean(r.pickup_at),total:r.unit_price==null?null:r.unit_price*r.quantity+r.shipping_fee,deadline:r.deadline?new Date(r.deadline*1000).toISOString():null,status:r.paid?(r.pickup_at?(r.fulfillment==="shipping"?"発送済み":"受取済み"):"入金済み"):r.deadline&&r.deadline<=now?"支払期限終了":eligible?"お支払い受付中":"支払い案内待ち",paymentPath:eligible?"/payment/"+r.token:null};
+  })});
+}
+
 async function saveSettings(request, db, campaign) {
   const body = await readBody(request);
   const goal = body?.reservation_goal;
@@ -385,11 +404,13 @@ async function handleRequest(request, env) {
   const project = url.searchParams.get("project");
   const id = url.searchParams.get("id");
   if ((pathname === "/api/campaign" && request.method === "GET") ||
-      (["/api/reservations", "/api/verify-email", "/api/cancel-code", "/api/cancel-reservation"].includes(pathname) && request.method === "POST")) {
+      (["/api/reservations", "/api/verify-email", "/api/cancel-code", "/api/cancel-reservation", "/api/lookup-code", "/api/lookup-reservations"].includes(pathname) && request.method === "POST")) {
     const campaign = await findCampaign(env, { artist, project });
     if (!campaign) return json({ error: "作品が見つかりません。" }, 404);
     if (pathname === "/api/campaign") return json(await publicData(env, campaign));
     if (pathname === "/api/verify-email") return startVerification(request, env, campaign);
+    if (pathname === "/api/lookup-code") return startVerification(request, env, campaign, false, true);
+    if (pathname === "/api/lookup-reservations") return lookupReservations(request, env, campaign);
     if (pathname === "/api/cancel-code") return startVerification(request, env, campaign, true);
     if (pathname === "/api/cancel-reservation") return cancelReservation(request, env, campaign);
     return reserve(request, env, campaign);

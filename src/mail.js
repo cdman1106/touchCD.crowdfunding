@@ -132,19 +132,19 @@ function throttle(db, key, now, window, limit) {
   `).bind(key, now + window, now, now, now, limit);
 }
 
-async function startVerification(request, env, campaign, cancel = false) {
-  if (campaign.demo || (cancel ? !env.DB || !mailReady(env) : !bookingOpen(env, campaign))) return json({ error: "現在、予約を受け付けていません。" }, 409);
+async function startVerification(request, env, campaign, cancel = false, lookup = false) {
+  if (campaign.demo || (cancel || lookup ? !env.DB || !mailReady(env) : !bookingOpen(env, campaign))) return json({ error: "現在、予約を受け付けていません。" }, 409);
   const body = await readBody(request);
   const email = asEmail(body?.email);
   if (!validEmail(email)) return json({ error: "メールアドレスをご確認ください。" }, 400);
   const { reserved, capacity, unlimited } = await publicData(env, campaign);
-  if (!cancel && !unlimited && reserved >= capacity) return json({ error: "予定数に達しました。" }, 409);
+  if (!cancel && !lookup && !unlimited && reserved >= capacity) return json({ error: "予定数に達しました。" }, 409);
   const now = Date.now();
   const id = crypto.randomUUID();
   const code = randomCode();
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const [digest, addressKey, ipKey] = await Promise.all([
-    emailDigest(env, cancel ? ["cancel", campaign.id, id, email, code] : [campaign.id, id, email, code]),
+    emailDigest(env, lookup ? ["lookup", campaign.id, id, email, code] : cancel ? ["cancel", campaign.id, id, email, code] : [campaign.id, id, email, code]),
     emailDigest(env, ["email", email]),
     emailDigest(env, ["ip", ip]),
   ]);
@@ -166,8 +166,8 @@ async function startVerification(request, env, campaign, cancel = false) {
     WHERE email_verifications.issued_at <= ?
   `).bind(id, campaign.id, email, digest, now, now + codeLifetimeMs, now - resendDelayMs).run();
   if (!issued.meta.changes) return json({ error: "続けて送る場合は、約1分お待ちください。" }, 429);
-  const sent = await sendMail(env, email, cancel ? "【touchCD】無料予約キャンセルの認証コード" : "【touchCD】予約のメール認証コード",
-    [`認証コード：${code}`, cancel ? "キャンセル画面にこの6桁を入力してください。有効期限は10分です。" : "予約画面にこの6桁を入力してください。有効期限は10分です。", "心当たりがない場合は、このメールを破棄してください。"].join("\n\n"), `verification/${id}`);
+  const sent = await sendMail(env, email, lookup ? "【touchCD】予約確認の認証コード" : cancel ? "【touchCD】無料予約キャンセルの認証コード" : "【touchCD】予約のメール認証コード",
+    [`認証コード：${code}`, lookup ? "予約確認画面にこの6桁を入力してください。有効期限は10分です。" : cancel ? "キャンセル画面にこの6桁を入力してください。有効期限は10分です。" : "予約画面にこの6桁を入力してください。有効期限は10分です。", "心当たりがない場合は、このメールを破棄してください。"].join("\n\n"), `verification/${id}`);
   if (!sent) {
     await env.DB.prepare("DELETE FROM email_verifications WHERE id = ?").bind(id).run();
     return json({ error: "認証メールを送れませんでした。少し時間をおいてお試しください。" }, 503);
