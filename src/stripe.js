@@ -104,6 +104,7 @@ async function stripeWebhook(request,env){
   let e;try{e=JSON.parse(raw);}catch{return json({error:"body"},400);}
   if(!["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(e.type))return json({received:true});
   const s=e.data?.object;
+  if(s?.metadata?.delivery_change&&s.payment_status==="paid")return recordDeliveryPayment(env,s);
   if(!s||!uuidLike(s.client_reference_id)||s.metadata?.reservation_id!==s.client_reference_id||s.payment_status!=="paid")return json({received:true});
   return recordStripePayment(env,s);
 }
