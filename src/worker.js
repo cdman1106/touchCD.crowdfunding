@@ -359,6 +359,41 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
+  // Temporary, fixed sandbox fixture verification. No live key, reservation changes, or real funds.
+  if(pathname.startsWith("/api/sandbox-refund-check/")&&request.method==="GET"){
+    const token=pathname.slice("/api/sandbox-refund-check/".length);
+    if(!/^[a-f0-9]{64}$/.test(token))return json({error:"not found"},404);
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,"0")).join("");
+    if(hash!=="ae043e337e212ecdd2e953084c7f254244b0947eadcf19e0a8d078a68ca42dc3")return json({error:"not found"},404);
+    const key=env.STRIPE_TEST_SECRET_KEY,db=env.DB;
+    if(typeof key!=="string"||!key.startsWith("sk_test_"))return json({error:"test key required"},503);
+    const testEnv={STRIPE_SECRET_KEY:key},fixture="1be01bbd5e8268ec1fdb48616e55e4611323ab40ec74ee08f7a70fd583831612",sessionId="cs_test_b0brIo31qF4xf7Am2FowolH1OhNqTc6ahPJju4jnFSr6eAa4D5mGjIkAXf";
+    let stage="account";
+    try{
+      const account=await stripeCall(testEnv,"account");
+      if(account.id!=="acct_1UdUvZFZj6W6MV5A")throw Error("wrong sandbox");
+      stage="session";
+      const fixtureRow=await db.prepare("SELECT session_id,refund_ok FROM stripe_sandbox_checkout_fixture WHERE id=?").bind(fixture).first();
+      if(fixtureRow?.session_id!==sessionId)throw Error("fixture mismatch");
+      const s=await stripeCall(testEnv,"checkout/sessions/"+sessionId);
+      if(s.id!==sessionId||s.livemode!==false||s.mode!=="payment"||s.status!=="complete"||s.payment_status!=="paid"||s.amount_total!==3500||s.currency!=="jpy"||typeof s.payment_intent!=="string")throw Error("payment not verified");
+      stage="intent";
+      const pi=await stripeCall(testEnv,"payment_intents/"+encodeURIComponent(s.payment_intent));
+      if(pi.id!==s.payment_intent||pi.livemode!==false||pi.status!=="succeeded"||pi.amount_received!==3500||pi.currency!=="jpy")throw Error("intent mismatch");
+      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET payment_ok=1,error_stage=NULL WHERE id=?").bind(fixture).run();
+      stage="refund";
+      const list=await stripeCall(testEnv,"refunds?payment_intent="+encodeURIComponent(pi.id)+"&limit=100");
+      if(list.has_more||!Array.isArray(list.data))throw Error("refund history unavailable");
+      const active=list.data.filter(x=>!["failed","canceled"].includes(x.status));
+      let refund;
+      if(active.length===1&&active[0].amount===3500&&active[0].payment_intent===pi.id)refund=active[0];
+      else if(list.data.length===0)refund=await stripeCall(testEnv,"refunds",{payment_intent:pi.id,amount:"3500"},"sandbox-user-checkout-full-refund-"+sessionId);
+      else throw Error("prior refund review");
+      if(refund.amount!==3500||refund.currency!=="jpy"||refund.payment_intent!==pi.id||refund.status!=="succeeded")throw Error("refund not succeeded");
+      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET refund_ok=1,error_stage=NULL WHERE id=?").bind(fixture).run();
+      return json({sandbox:true,payment:3500,refund:3500,real_charge:0});
+    }catch(e){await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET error_stage=? WHERE id=?").bind(stage,fixture).run();return json({error:"sandbox check failed",stage},503);}
+  }
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
