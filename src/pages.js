@@ -82,6 +82,8 @@ function purchaseNotices() {
 
 function statusFor(data) {
   if (data.campaign.demo) return "サンプル";
+  if(data.outcome==="failed")return "製造不成立";
+  if(data.outcome==="succeeded")return "製造決定";
   if (data.paid >= data.paidGoal) return "製造決定";
   if (Date.parse(data.paymentDeadline) <= Date.now()) return "支払期限終了";
   if (!data.unlimited && data.reserved >= data.capacity) return "予定数到達";
