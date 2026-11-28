@@ -178,7 +178,7 @@ async function startVerification(request, env, campaign, cancel = false) {
 function receiptText(campaign, quantity, code, entry = {}) {
   const shipping = entry.fulfillment === "shipping";
   const delivery = shipping
-    ? [`受取方法：自宅配送（送料 ${amount(entry.shipping_fee)}）`, `発送案内：${campaign.shippingNote || "製造成立後にご案内します。"}`]
+    ? [`受取方法：自宅配送（送料 ${amount(entry.shipping_fee)}）`, `発送案内：${campaign.shippingNote || "製造成立後にご案内します。"}`, `配送方法：${postalDeliveryNote}`]
     : ["製造が決まった場合、当日はこの支払い完了メールの画面を会場スタッフにお見せください。番号を覚える必要はありません。", `受取コード：${code}`, `受取案内：${campaign.pickup}`];
   return [
     "お支払いを確認しました。",
