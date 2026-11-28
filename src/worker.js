@@ -238,14 +238,14 @@ async function lookupReservations(request, env, campaign) {
   const check="id = ? AND campaign_id = ? AND email = ? AND expires_at > unixepoch('subsec') * 1000 AND attempts < 5";
   const args=[verificationId,campaign.id,email];
   const attempt=db.prepare("UPDATE email_verifications SET attempts=attempts+1 WHERE "+check+" AND digest<>?").bind(...args,digest);
-  const select=db.prepare("SELECT r.quantity,r.paid,r.fulfillment,r.shipping_fee,r.pickup_at,o.unit_price,o.deadline,o.token,o.guide_sent_at,f.status AS refund_status,a.outcome FROM reservations r LEFT JOIN stripe_orders o ON o.reservation_id=r.id LEFT JOIN automation_refunds f ON f.reservation_id=r.id LEFT JOIN automation_campaigns a ON a.campaign_id=r.campaign_id WHERE r.campaign_id=? AND r.email=? AND EXISTS (SELECT 1 FROM email_verifications WHERE "+check+" AND digest=?) ORDER BY r.created_at DESC LIMIT 100").bind(campaign.id,email,...args,digest);
+  const select=db.prepare("SELECT r.quantity,r.paid,r.fulfillment,r.shipping_fee,r.pickup_at,o.unit_price,o.deadline,o.token,o.guide_sent_at,f.status AS refund_status,a.outcome,d.status AS delivery_change_status,d.deadline AS delivery_deadline,d.token AS delivery_token,d.sent_at AS delivery_sent_at FROM reservations r LEFT JOIN stripe_orders o ON o.reservation_id=r.id LEFT JOIN automation_refunds f ON f.reservation_id=r.id LEFT JOIN automation_campaigns a ON a.campaign_id=r.campaign_id LEFT JOIN delivery_changes d ON d.reservation_id=r.id WHERE r.campaign_id=? AND r.email=? AND EXISTS (SELECT 1 FROM email_verifications WHERE "+check+" AND digest=?) ORDER BY r.created_at DESC LIMIT 100").bind(campaign.id,email,...args,digest);
   const consume=db.prepare("DELETE FROM email_verifications WHERE "+check+" AND digest=?").bind(...args,digest);
   const [,rows,verified]=await db.batch([attempt,select,consume]);
   if(!verified.meta.changes)return json({error:"認証コードが違うか、有効期限が切れています。"},422);
   const now=Date.now()/1000;
   return json({reservations:rows.results.map(r=>{
     const eligible=!r.outcome&&!r.paid&&stripeReady(env)&&r.guide_sent_at&&r.deadline>now&&/^[a-f0-9-]{72}$/.test(r.token||"");
-    return {quantity:r.quantity,fulfillment:r.fulfillment,paid:Boolean(r.paid),received:Boolean(r.pickup_at),total:r.unit_price==null?null:r.unit_price*r.quantity+r.shipping_fee,deadline:r.deadline?new Date(r.deadline*1000).toISOString():null,status:r.refund_status==="succeeded"?"返金済み":r.outcome==="failed"?(r.paid?"製造不成立・返金対応中":"製造不成立"):r.paid?(r.pickup_at?(r.fulfillment==="shipping"?"発送済み":"受取済み"):"入金済み"):r.deadline&&r.deadline<=now?"支払期限終了":eligible?"お支払い受付中":"支払い案内待ち",paymentPath:eligible?"/payment/"+r.token:null};
+    return {quantity:r.quantity,fulfillment:r.fulfillment,paid:Boolean(r.paid),received:Boolean(r.pickup_at),total:r.unit_price==null?null:r.unit_price*r.quantity+r.shipping_fee,deadline:r.deadline?new Date(r.deadline*1000).toISOString():null,deliveryChangeStatus:r.delivery_change_status||null,deliveryPaymentPath:r.paid&&r.delivery_change_status==="issued"&&r.delivery_sent_at&&r.delivery_deadline>now&&/^[a-f0-9-]{72}$/.test(r.delivery_token||"")?"/delivery-payment/"+r.delivery_token:null,status:r.refund_status==="succeeded"?"返金済み":r.outcome==="failed"?(r.paid?"製造不成立・返金対応中":"製造不成立"):r.paid?(r.pickup_at?(r.fulfillment==="shipping"?"発送済み":"受取済み"):"入金済み"):r.deadline&&r.deadline<=now?"支払期限終了":eligible?"お支払い受付中":"支払い案内待ち",paymentPath:eligible?"/payment/"+r.token:null};
   })});
 }
 
@@ -360,6 +360,8 @@ async function handleRequest(request, env) {
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
+  const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
+  if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
   const invite = pathname.match(/^\/payment\/([a-f0-9-]{72})$/);
   if (invite) return startStripeCheckout(request,env,invite[1]);
   if (["GET", "HEAD"].includes(request.method)) {
@@ -436,15 +438,17 @@ async function handleRequest(request, env) {
         getSettings(env.DB, campaign), publicData(env, campaign), getPaymentSettings(env.DB, campaign),
         env.DB.prepare(`SELECT r.id, r.name, r.email, r.quantity, r.paid, r.created_at, r.email_verified_at,
           r.pickup_at, r.paid_receipt_id, r.payment_url, r.fulfillment, r.shipping_fee, r.postal_code,
-          r.shipping_address, p.sent_at AS receipt_sent_at, n.number AS pickup_number, so.guide_sent_at AS stripe_guide_sent_at, CASE WHEN so.reservation_id IS NULL THEN 0 ELSE 1 END AS stripe_managed FROM reservations r
+          r.shipping_address, dc.status AS delivery_change_status, dc.sent_at AS delivery_change_sent_at, dc.paid_at AS delivery_change_paid_at, dc.shipping_name AS delivery_shipping_name, dc.amount AS delivery_change_amount, p.sent_at AS receipt_sent_at, n.number AS pickup_number, so.guide_sent_at AS stripe_guide_sent_at, CASE WHEN so.reservation_id IS NULL THEN 0 ELSE 1 END AS stripe_managed FROM reservations r
           LEFT JOIN payment_receipts p ON p.id = r.paid_receipt_id
           LEFT JOIN pickup_numbers n ON n.reservation_id = r.id
           LEFT JOIN stripe_orders so ON so.reservation_id = r.id
+          LEFT JOIN delivery_changes dc ON dc.reservation_id = r.id
           WHERE r.campaign_id = ? ORDER BY r.created_at DESC`).bind(campaign.id).all(),
       ]);
       return json({ settings, data, paymentSettings, automation:await automationOverview(env.DB,campaign.id), stripeConfigured:stripeReady(env), reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? String(entry.pickup_number ?? pickupCode(entry.id)) : null })) });
     }
     if (pathname === "/api/manage/payment-settings" && request.method === "PUT") return savePaymentSettings(request, env.DB, campaign);
+    if (pathname === "/api/manage/delivery-change" && request.method === "PUT") {if(previewAccess)return json({error:"本番管理画面で操作してください。"},403);return issueDeliveryChange(request,env,campaign);}
     if (pathname === "/api/manage/stripe-guide" && request.method === "PUT") return issueStripeGuide(request,env,campaign);
     if (pathname === "/api/manage/payment-link" && request.method === "PUT") return savePaymentLink(request, env.DB, campaign);
     if (pathname === "/api/manage/payment-guide" && request.method === "POST") return draftPaymentGuide(request, env, campaign);
@@ -520,7 +524,7 @@ export default {
   async fetch(request, env) {
     try {
       const { pathname } = new URL(request.url);
-      if (env.DB && (pathname === "/" || pathname.startsWith("/artists/") || pathname.startsWith("/works/") || pathname.startsWith("/preview/") || pathname.startsWith("/payment/") || pathname.startsWith("/api/"))) {
+      if (env.DB && (pathname === "/" || pathname.startsWith("/artists/") || pathname.startsWith("/works/") || pathname.startsWith("/preview/") || pathname.startsWith("/payment/") || pathname.startsWith("/delivery-payment/") || pathname.startsWith("/api/"))) {
         await ensureReleaseDetails(env.DB);
       }
       return await handleRequest(request, env);
