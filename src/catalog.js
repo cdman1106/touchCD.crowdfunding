@@ -1,5 +1,7 @@
 const artistPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const izumiCampaignId = "izumi-wada-jazz-date";
+const izumiShippingSchedule = "2027年2月25日（木）〜3月3日（水）に順次発送予定（日本国内のみ）";
+const postalDeliveryNote = "日本郵便・定形外郵便。発送後2〜3配達日程度が目安（土日祝日は原則配達なし）。追跡番号・日時指定・郵便局の損害補償なし。地域等により遅れる場合があります。";
 const isIzumiCampaign = (campaign) => campaign?.id === izumiCampaignId;
 const releasePath = (campaign) => isIzumiCampaign(campaign) ? "/works/izumi-wada" : `/artists/${campaign.artistSlug}/${campaign.slug}`;
 const validSlug = (value) => typeof value === "string" && value.length >= 2 && value.length <= 48 && artistPattern.test(value);
