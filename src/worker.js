@@ -364,7 +364,7 @@ async function handleRequest(request, env) {
     const input=pathname.slice("/api/sandbox-qa/".length);
     if(!/^[a-f0-9]{64}$/.test(input))return json({error:"not found"},404);
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(input))),b=>b.toString(16).padStart(2,"0")).join("");
-    if(hash!=="641eebfe66ede3a7352b7e79dbf55bb182db7ccb95592732fb513ecdb3dbcfbe")return json({error:"not found"},404);
+    if(hash!=="20c6ee1c1879b9c4d5b7c06c555388718f5e381bb3c02064ec17818eff1a8866")return json({error:"not found"},404);
     const db=env.DB;
     await db.prepare("CREATE TABLE IF NOT EXISTS sandbox_qa_results(id TEXT PRIMARY KEY, stage TEXT, auth_ok INTEGER DEFAULT 0, checkout_ok INTEGER DEFAULT 0, expired_ok INTEGER DEFAULT 0, payment_ok INTEGER DEFAULT 0, decline_ok INTEGER DEFAULT 0, refund_ok INTEGER DEFAULT 0, methods TEXT, error_code TEXT)").run();
     const claim=await db.prepare("INSERT OR IGNORE INTO sandbox_qa_results(id,stage) VALUES(?,'started')").bind(hash).run();
@@ -396,7 +396,7 @@ async function handleRequest(request, env) {
       if(expired.livemode!==false||expired.status!=="expired"||expired.payment_status!=="unpaid")throw Error("expiry_mismatch");
       await flag("expired_ok");
       stage="payment";
-      const payment=await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_visa",confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox QA; no real money","metadata[touchcd_qa]":"sandbox"},unique+"-pay");
+      const payment=await call("payment_intents",{amount:"3500",currency:"jpy",payment_method:"pm_card_visa",confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox QA; no real money","metadata[touchcd_qa]":"sandbox"},unique+"-pay");
       if(payment.livemode!==false||payment.status!=="succeeded"||payment.amount_received!==3500||payment.currency!=="jpy")throw Error("payment_mismatch");
       await flag("payment_ok");
       stage="refund";
@@ -407,7 +407,7 @@ async function handleRequest(request, env) {
       await flag("refund_ok");
       stage="decline";
       let declined=false;
-      try{await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_chargeDeclined",confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox decline QA"},unique+"-decline");}catch(e){if(e.stripeCode==="card_declined")declined=true;else throw e;}
+      try{await call("payment_intents",{amount:"3500",currency:"jpy",payment_method:"pm_card_chargeDeclined",confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox decline QA"},unique+"-decline");}catch(e){if(e.stripeCode==="card_declined")declined=true;else throw e;}
       if(!declined)throw Error("decline_not_detected");
       await flag("decline_ok");
       await db.prepare("UPDATE sandbox_qa_results SET stage='complete' WHERE id=?").bind(hash).run();
