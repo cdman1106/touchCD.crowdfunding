@@ -162,6 +162,8 @@ async function saveProject(request, env) {
   const args = [title, story, pickup, price, deadline, image, music, contact, visibility, Number(reservationOpen),
     eventInfo, audioAt, releaseUpdate, shippingNote, shippingFee];
   if (id) {
+    const lifecycle=await automationState(env.DB,id);
+    if(lifecycle?.outcome&&(reservationOpen||deadline!==current.deadline))return json({error:"製造判定済み企画の再受付・締切変更はできません。"},409);
     const changed = await env.DB.prepare(`UPDATE projects SET title = ?, story = ?, pickup = ?, price = ?,
       deadline = ?, image = ?, music = ?, contact = ?, visibility = ?, reservation_open = ?,
       event_info = ?, audio_at = ?, release_update = ?, shipping_note = ?, shipping_fee = ?
