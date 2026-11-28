@@ -20,6 +20,7 @@ command = "npm run build"
 
 [vars]
 SHOW_DEMO_CAMPAIGNS = "0"
+STRIPE_PAYMENTS_ENABLED = "1"
 MAIL_PROVIDER = "cloudflare"
 ADMIN_EMAIL = "cdman1106@gmail.com"
 MAIL_FROM = "noreply@send.touchcd-crowdfunding.com"
