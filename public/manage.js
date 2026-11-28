@@ -10,6 +10,8 @@ const pathFor = ({ artistSlug, slug }) => `/artists/${artistSlug}/${slug}`;
 let key = "";
 let adminChallenge = "";
 let stripeConfigured = false;
+let automationConfig=null;
+$("save-automation").addEventListener("click",async()=>{if(!selected)return;const enabled=$("automation-enabled").checked,refundsEnabled=$("automation-refunds").checked;if(refundsEnabled&&!enabled){$("automation-feedback").textContent="自動運用を有効にしてください。";return;}if(refundsEnabled&&!automationConfig?.refundsEnabled&&!confirm("不成立時の条件を満たす決済を全額返金します。有効化しますか？"))return;const id=selected,button=$("save-automation");button.disabled=true;try{await api(`automation?id=${encodeURIComponent(id)}`,{enabled,refundsEnabled});if(selected===id)await loadReservations(id);$("automation-feedback").textContent="設定を保存しました。";}catch(e){$("automation-feedback").textContent=e.message;}finally{button.disabled=false;}});
 let batchInProgress = false;
 let batchEligible = false;
 const bulkGuide = $("bulk-stripe-guide");
@@ -245,6 +247,10 @@ async function loadReservations(projectId) {
     if (input.name && Object.hasOwn(result.settings, input.name)) input.value = result.settings[input.name];
   }
   stripeConfigured = Boolean(result.stripeConfigured);
+  automationConfig=result.automation||{};
+  $("automation-enabled").checked=!!automationConfig.enabled;
+  $("automation-refunds").checked=!!automationConfig.refundsEnabled;
+  $("automation-state").textContent=[automationConfig.enabled?"自動運用：有効":"自動運用：停止",automationConfig.refundsEnabled?"自動返金：有効":"自動返金：停止",automationConfig.outcome?`製造判定：${automationConfig.outcome==="succeeded"?"成立":"不成立"}（${automationConfig.paid}/${automationConfig.goal}個）`:"製造判定：未確定",automationConfig.lastChecked?`最終確認：${new Date(automationConfig.lastChecked).toLocaleString("ja-JP")}`:"",automationConfig.lastError||"",...(automationConfig.notices||[]).map(n=>`${n.kind} ${n.state}: ${n.count}件`),...(automationConfig.refunds||[]).map(n=>`返金 ${n.status}: ${n.count}件`)].filter(Boolean).join(" ／ ");
   reservations = result.reservations;
   $("download").hidden = !reservations.length;
   renderEntries();
