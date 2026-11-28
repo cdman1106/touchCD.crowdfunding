@@ -76,13 +76,13 @@
       </section>
       <section class="admin-card" hidden id="payment-panel">
         <h2>支払い案内の設定</h2>
-        <p class="field-note" id="payment-progress"></p>
+        <p class="field-note" id="payment-progress"></p><button type="button" id="bulk-stripe-guide" class="primary" hidden>未送信の予約者へ一括送信</button><p id="bulk-stripe-status" class="field-note" role="status"></p>
         <form id="payment-settings-form">
           <div class="fields two">
             <label>支払期限（日本時間）<input name="deadline" type="datetime-local"></label>
             <label>1個注文用の共通決済リンク<input name="checkout_url" type="url" maxlength="1500" placeholder="https://"></label>
           </div>
-          <p class="field-note">複数個または送料がかかる注文では、予約一覧で総額に合った個別決済リンクを登録します。</p>
+          <p class="field-note">Stripe連携時は、予約内容に合わせた個別決済URLを自動発行できます。未連携の場合のみ個別決済リンクを登録してください。</p>
           <button type="submit" class="primary">支払い設定を保存</button>
           <p class="field-note payment-feedback" id="payment-settings-feedback" role="status"></p>
         </form>
