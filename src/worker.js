@@ -252,7 +252,7 @@ async function saveSettings(request, db, campaign) {
   return result.meta.changes ? json({ saved: true }) : json({ error: "既存の予約数を下回る上限には変更できません。" }, 409);
 }
 
-async function editReservation(request, env, campaign) {
+async function editReservation(request, env, campaign, verifiedStripe = false) {
   const body = await readBody(request);
   const { id, quantity, paid } = body || {};
   if (!uuidLike(id) || !Number.isInteger(quantity) || quantity < 1 || quantity > 5 || typeof paid !== "boolean") {
@@ -267,11 +267,11 @@ async function editReservation(request, env, campaign) {
       WHEN ? = 0 THEN NULL
       WHEN email_verified_at IS NOT NULL THEN COALESCE(paid_receipt_id, ?)
       ELSE NULL END
-    WHERE campaign_id = ? AND id = ? AND pickup_at IS NULL AND (paid = 0 OR ? = 0 OR quantity = ?) AND (? = 1 OR
+    WHERE campaign_id = ? AND id = ? AND pickup_at IS NULL AND (NOT EXISTS (SELECT 1 FROM stripe_orders WHERE reservation_id = reservations.id) OR ? = 1) AND (paid = 0 OR ? = 0 OR quantity = ?) AND (? = 1 OR
       (SELECT COALESCE(SUM(quantity), 0) FROM reservations WHERE campaign_id = ? AND id <> ?) + ? +
       COALESCE((SELECT offline_reserved FROM campaign_settings WHERE campaign_id = ?), 0) <=
       COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?))
-  `).bind(quantity, Number(paid), quantity, Number(paid), receiptId, campaign.id, id, Number(paid), quantity, Number(isIzumiCampaign(campaign)),
+  `).bind(quantity, Number(paid), quantity, Number(paid), receiptId, campaign.id, id, Number(verifiedStripe), Number(paid), quantity, Number(isIzumiCampaign(campaign)),
     campaign.id, id, quantity, campaign.id, campaign.id, defaults(campaign).capacity);
   const allocate = db.prepare(`
     INSERT INTO pickup_numbers (reservation_id, campaign_id, number)
@@ -339,6 +339,9 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
+  if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
+  const invite = pathname.match(/^\/payment\/([a-f0-9-]{72})$/);
+  if (invite) return startStripeCheckout(request,env,invite[1]);
   if (["GET", "HEAD"].includes(request.method)) {
     if (pathname === "/tokushoho") return assetResponse(request, "/", commerceDisclosure(request, env));
     if (pathname === "/pickup-example") return assetResponse(request, "/", pickupExample(request));
@@ -407,14 +410,16 @@ async function handleRequest(request, env) {
         getSettings(env.DB, campaign), publicData(env, campaign), getPaymentSettings(env.DB, campaign),
         env.DB.prepare(`SELECT r.id, r.name, r.email, r.quantity, r.paid, r.created_at, r.email_verified_at,
           r.pickup_at, r.paid_receipt_id, r.payment_url, r.fulfillment, r.shipping_fee, r.postal_code,
-          r.shipping_address, p.sent_at AS receipt_sent_at, n.number AS pickup_number FROM reservations r
+          r.shipping_address, p.sent_at AS receipt_sent_at, n.number AS pickup_number, so.guide_sent_at AS stripe_guide_sent_at, CASE WHEN so.reservation_id IS NULL THEN 0 ELSE 1 END AS stripe_managed FROM reservations r
           LEFT JOIN payment_receipts p ON p.id = r.paid_receipt_id
           LEFT JOIN pickup_numbers n ON n.reservation_id = r.id
+          LEFT JOIN stripe_orders so ON so.reservation_id = r.id
           WHERE r.campaign_id = ? ORDER BY r.created_at DESC`).bind(campaign.id).all(),
       ]);
-      return json({ settings, data, paymentSettings, reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? String(entry.pickup_number ?? pickupCode(entry.id)) : null })) });
+      return json({ settings, data, paymentSettings, stripeConfigured:stripeReady(env), reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? String(entry.pickup_number ?? pickupCode(entry.id)) : null })) });
     }
     if (pathname === "/api/manage/payment-settings" && request.method === "PUT") return savePaymentSettings(request, env.DB, campaign);
+    if (pathname === "/api/manage/stripe-guide" && request.method === "PUT") return issueStripeGuide(request,env,campaign);
     if (pathname === "/api/manage/payment-link" && request.method === "PUT") return savePaymentLink(request, env.DB, campaign);
     if (pathname === "/api/manage/payment-guide" && request.method === "POST") return draftPaymentGuide(request, env, campaign);
     if (pathname === "/api/manage/settings" && request.method === "PUT") return saveSettings(request, env.DB, campaign);

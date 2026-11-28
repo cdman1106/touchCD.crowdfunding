@@ -41,7 +41,7 @@ async function savePaymentLink(request, db, campaign) {
   const url = parseCheckoutUrl(body?.checkout_url);
   if (!uuidLike(body?.id) || url === null) return json({ error: "予約情報と決済リンクをご確認ください。" }, 400);
   const result = await db.prepare(`
-    UPDATE reservations SET payment_url = ? WHERE id = ? AND campaign_id = ? AND paid = 0
+    UPDATE reservations SET payment_url = ? WHERE id = ? AND campaign_id = ? AND paid = 0 AND NOT EXISTS (SELECT 1 FROM stripe_orders WHERE reservation_id = reservations.id)
   `).bind(url, body.id, campaign.id).run();
   return result.meta.changes ? json({ saved: true }) : json({ error: "未入金の予約が見つかりません。" }, 409);
 }

@@ -9,6 +9,7 @@ const labels = { draft: "下書き", unlisted: "リンク限定", listed: "一�
 const pathFor = ({ artistSlug, slug }) => `/artists/${artistSlug}/${slug}`;
 let key = "";
 let adminChallenge = "";
+let stripeConfigured = false;
 let projects = [];
 let reservations = [];
 let selected = null;
@@ -128,7 +129,7 @@ function renderEntry(entry) {
   const save = document.createElement("button");
   Object.assign(save, { type: "submit", className: "small-button", textContent: "保存" });
   form.append(quantityField, paidField, save);
-  li.append(form);
+  if (!entry.stripe_managed) li.append(form);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     save.disabled = true;
@@ -150,6 +151,11 @@ function renderPaymentActions(entry, projectId) {
   const summary = document.createElement("summary");
   summary.textContent = "支払い案内";
   details.append(summary);
+  if (stripeConfigured || entry.stripe_managed) {
+    const note=document.createElement("p");note.className="field-note";note.textContent=entry.stripe_guide_sent_at?"決済案内送信済み。入金はStripeから自動反映されます。":"予約内容から専用決済URLを発行してメール送信します。";details.append(note);
+    if (!entry.stripe_guide_sent_at) {const actions=document.createElement("div");addEntryAction(actions,"決済案内を送信","stripe-guide",projectId,{id:entry.id},"決済案内を送信しました。");details.append(actions);}
+    return details;
+  }
   const form = document.createElement("form");
   form.className = "payment-link-form";
   const label = document.createElement("label");
@@ -232,6 +238,7 @@ async function loadReservations(projectId) {
   for (const input of settings.elements) {
     if (input.name && Object.hasOwn(result.settings, input.name)) input.value = result.settings[input.name];
   }
+  stripeConfigured = Boolean(result.stripeConfigured);
   reservations = result.reservations;
   $("download").hidden = !reservations.length;
   renderEntries();

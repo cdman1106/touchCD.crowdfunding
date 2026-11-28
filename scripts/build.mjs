@@ -35,7 +35,7 @@ const files = await Promise.all(Object.entries(paths).map(async ([route, name]) 
   return [route, name.endsWith(".webp") ? {base64: bytes.toString("base64")} : bytes.toString("utf8")];
 }));
 const output = new URL("../dist/server/", import.meta.url);
-const modules = await Promise.all(["catalog", "pages", "mail", "payment-settings", "worker"].map((name) =>
+const modules = await Promise.all(["catalog", "pages", "mail", "payment-settings", "stripe", "worker"].map((name) =>
   readFile(new URL(`../src/${name}.js`, import.meta.url), "utf8")));
 const worker = modules.join("\n");
 // These schema-only migrations can also initialize new databases at runtime.
@@ -61,6 +61,7 @@ const initialSchema = database.prepare(`SELECT sql FROM sqlite_schema
   .map(({ sql }) => sql.replace(/^CREATE (TABLE|INDEX) /i, "CREATE $1 IF NOT EXISTS "));
 initialSchema.push("CREATE TABLE IF NOT EXISTS pickup_numbers (reservation_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, number INTEGER NOT NULL CHECK (number > 0), UNIQUE (campaign_id, number))");
 initialSchema.push("CREATE TABLE IF NOT EXISTS admin_challenges (id TEXT PRIMARY KEY, digest TEXT NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0)", "CREATE TABLE IF NOT EXISTS admin_sessions (digest TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)");
+initialSchema.push("CREATE TABLE IF NOT EXISTS stripe_orders (reservation_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, token TEXT NOT NULL UNIQUE, quantity INTEGER NOT NULL, unit_price INTEGER NOT NULL, shipping_fee INTEGER NOT NULL, deadline INTEGER NOT NULL, title TEXT NOT NULL, generation INTEGER NOT NULL DEFAULT 0, session_expires INTEGER NOT NULL DEFAULT 0, session_id TEXT UNIQUE, guide_sent_at TEXT, payment_intent TEXT UNIQUE)");
 database.close();
 await mkdir(output, { recursive: true });
 await writeFile(new URL("index.js", output), `const siteAssets = ${JSON.stringify(Object.fromEntries(files))};\nconst initialSchema = ${JSON.stringify(initialSchema)};\nconst initialMigrations = ${JSON.stringify(initialMigrations)};\nconst releaseMigration = ${JSON.stringify(releaseMigration)};\nconst releaseColumns = ${JSON.stringify(releaseColumns)};\n${worker}`);
