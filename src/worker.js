@@ -359,6 +359,50 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
+  // Temporary one-use Stripe sandbox diagnostic. Never use a live key.
+  if(pathname.startsWith("/api/sandbox-test/")&&request.method==="GET"){
+    const token=pathname.slice("/api/sandbox-test/".length);
+    if(!/^[a-f0-9]{64}$/.test(token))return json({error:"not found"},404);
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,"0")).join("");
+    if(hash!=="9a29e124fd2fddf1032a6697bbd9177cd190c066783ebbbd870e8ee7aad0cb9c")return json({error:"not found"},404);
+    const db=env.DB,key=env.STRIPE_TEST_SECRET_KEY;
+    if(typeof key!=="string"||!key.startsWith("sk_test_"))return json({error:"test key required"},503);
+    const testEnv={STRIPE_SECRET_KEY:key};
+    await db.prepare("CREATE TABLE IF NOT EXISTS stripe_sandbox_checks (id TEXT PRIMARY KEY, account_ok INTEGER NOT NULL DEFAULT 0, checkout_ok INTEGER NOT NULL DEFAULT 0, payment_ok INTEGER NOT NULL DEFAULT 0, refund_ok INTEGER NOT NULL DEFAULT 0, decline_ok INTEGER NOT NULL DEFAULT 0, error_stage TEXT)").run();
+    const claim=await db.prepare("INSERT OR IGNORE INTO stripe_sandbox_checks(id) VALUES(?)").bind(hash).run();
+    if(!claim.meta.changes)return json({error:"already used"},409);
+    const mark=async(name)=>{if(!["account_ok","checkout_ok","payment_ok","refund_ok","decline_ok"].includes(name))throw Error("invalid stage");await db.prepare("UPDATE stripe_sandbox_checks SET "+name+"=1 WHERE id=?").bind(hash).run();};
+    let stage="account",session;
+    try{
+      const account=await stripeCall(testEnv,"account");
+      if(account.id!=="acct_1UdUvZFZj6W6MV5A")throw Error("wrong sandbox");
+      await mark("account_ok");
+      stage="checkout";
+      session=await stripeCall(testEnv,"checkout/sessions",{mode:"payment","payment_method_types[0]":"card","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD sandbox fixture","line_items[0][quantity]":"1",success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/",expires_at:String(Math.floor(Date.now()/1000)+1860)},"sandbox-checkout-"+hash);
+      if(session.livemode!==false||session.amount_total!==3000||session.currency!=="jpy"||session.status!=="open")throw Error("unexpected checkout");
+      const closed=await stripeCall(testEnv,"checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"sandbox-expire-"+hash);
+      if(closed.livemode!==false||closed.status!=="expired"||closed.payment_status!=="unpaid")throw Error("checkout expiry");
+      await mark("checkout_ok");
+      stage="payment";
+      const pi=await stripeCall(testEnv,"payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_visa",confirm:"true",description:"touchCD isolated sandbox test 3000 + 500"},"sandbox-payment-"+hash);
+      if(pi.livemode!==false||pi.status!=="succeeded"||pi.amount_received!==3500||pi.currency!=="jpy")throw Error("unexpected payment");
+      await mark("payment_ok");
+      stage="refund";
+      const refund=await stripeCall(testEnv,"refunds",{payment_intent:pi.id,amount:"3500"},"sandbox-refund-"+hash);
+      if(refund.amount!==3500||refund.currency!=="jpy"||refund.payment_intent!==pi.id||refund.status!=="succeeded")throw Error("refund not complete");
+      await mark("refund_ok");
+      stage="decline";
+      const response=await fetch("https://api.stripe.com/v1/payment_intents",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/x-www-form-urlencoded","Idempotency-Key":"sandbox-decline-"+hash},body:new URLSearchParams({amount:"3000",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_chargeDeclined",confirm:"true"}),signal:AbortSignal.timeout(12000)});
+      const declined=await response.json();
+      if(response.status!==402||declined.error?.code!=="card_declined"||declined.error?.payment_intent?.livemode!==false)throw Error("decline not verified");
+      await mark("decline_ok");
+      return json({sandbox:true,checkout:true,payment:true,refund:true,decline:true,real_charge:0});
+    }catch(e){
+      if(stage==="checkout"&&session?.id&&session.livemode===false){try{await stripeCall(testEnv,"checkout/sessions/"+encodeURIComponent(session.id)+"/expire",{},"sandbox-expire-"+hash);}catch{}}
+      await db.prepare("UPDATE stripe_sandbox_checks SET error_stage=? WHERE id=?").bind(stage,hash).run();
+      return json({error:"sandbox check failed",stage},503);
+    }
+  }
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
