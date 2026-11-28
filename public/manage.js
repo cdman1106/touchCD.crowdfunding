@@ -10,6 +10,11 @@ const pathFor = ({ artistSlug, slug }) => `/artists/${artistSlug}/${slug}`;
 let key = "";
 let adminChallenge = "";
 let stripeConfigured = false;
+let batchInProgress = false;
+let batchEligible = false;
+const bulkGuide = $("bulk-stripe-guide");
+function bulkTargets(){return reservations.filter(e=>!e.paid && e.email_verified_at && !e.stripe_guide_sent_at && (!e.payment_url || e.stripe_managed));}
+function updateBulkGuide(){const n=bulkTargets().length;bulkGuide.hidden=!stripeConfigured;bulkGuide.disabled=batchInProgress||!batchEligible||!n;bulkGuide.textContent=`未送信の予約者 ${n}件へ一括送信`;}
 let projects = [];
 let reservations = [];
 let selected = null;
@@ -230,6 +235,7 @@ function renderEntries() {
 }
 
 pickupSearch.addEventListener("input", renderEntries);
+bulkGuide.addEventListener("click",async()=>{if(batchInProgress||!batchEligible||!selected)return;const projectId=selected, targets=bulkTargets();if(!targets.length||!confirm(`${targets.length}件の認証済み未入金予約者へ支払い案内を送ります。よろしいですか？`))return;batchInProgress=true;updateBulkGuide();let sent=0,failed=0;try{for(const entry of targets){if(selected!==projectId)break;try{await api(`stripe-guide?id=${encodeURIComponent(projectId)}`,{id:entry.id});sent++;}catch(error){failed++;}$("bulk-stripe-status").textContent=`送信済み ${sent}件／失敗 ${failed}件（対象 ${targets.length}件）`;}if(selected===projectId)await loadReservations(projectId);}catch(error){showError(error);}finally{batchInProgress=false;updateBulkGuide();}});
 
 async function loadReservations(projectId) {
   const revision = ++selectionRevision;
@@ -250,6 +256,8 @@ async function loadReservations(projectId) {
   paymentSettings.elements.checkout_url.value = result.paymentSettings.checkout_url;
   paymentSettings.elements.deadline.value = result.paymentSettings.deadline.slice(0, 16);
   $("payment-progress").textContent = `無料予約 ${reserved}個 / 支払い案内を出す目標 ${reservationGoal}個。`;
+  batchEligible = !campaign.demo && reserved >= reservationGoal && Date.parse(result.paymentSettings.deadline)>Date.now()+1860000;
+  updateBulkGuide();
   $("payment-example-controls").hidden = !campaign.demo;
   $("settings-panel").hidden = false;
   $("payment-panel").hidden = false;
