@@ -114,7 +114,7 @@ async function recordStripePayment(env,s){
   if(!o)return json({error:"reservation not found"},409);
   if(o.session_id!==s.id||String(o.generation)!==s.metadata.generation||o.unit_price*o.quantity+o.shipping_fee!==s.amount_total||o.current_quantity!==o.quantity||o.current_shipping_fee!==o.shipping_fee||(o.payment_intent&&o.payment_intent!==s.payment_intent))return json({error:"reconciliation required"},409);
   const final=await automationState(db,o.campaign_id);
-  if(final?.outcome==="failed"){if(o.payment_intent===s.payment_intent)return json({received:true});return json({error:"late payment reconciliation required"},409);}
+  if(final?.outcome){if(o.payment_intent===s.payment_intent)return json({received:true});return json({error:"late payment reconciliation required"},409);}
   const campaign=await findCampaign(env,{id:o.campaign_id},true);if(!campaign)return json({error:"campaign unavailable"},503);
   if(!o.paid){
     const result=await editReservation(new Request(stripeOrigin+"/api/manage/reservation",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:o.reservation_id,quantity:o.quantity,paid:true})}),env,{...campaign,title:o.title,price:o.unit_price},true);
