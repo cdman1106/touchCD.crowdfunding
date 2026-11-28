@@ -4,7 +4,8 @@ const automationSchema=[
   "CREATE TABLE IF NOT EXISTS automation_mail (reservation_id TEXT NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, PRIMARY KEY(reservation_id,kind))",
   "CREATE TABLE IF NOT EXISTS automation_checks (reservation_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, generation INTEGER NOT NULL, checked_at INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS automation_refunds (reservation_id TEXT PRIMARY KEY, refund_id TEXT, status TEXT NOT NULL, amount INTEGER NOT NULL, updated_at INTEGER NOT NULL)",
-  "CREATE TABLE IF NOT EXISTS automation_locks (campaign_id TEXT PRIMARY KEY, token TEXT NOT NULL, expires_at INTEGER NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS automation_locks (campaign_id TEXT PRIMARY KEY, token TEXT NOT NULL, expires_at INTEGER NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS delivery_changes (reservation_id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL, token TEXT NOT NULL UNIQUE, deadline INTEGER NOT NULL, amount INTEGER NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL, sent_at TEXT, generation INTEGER NOT NULL DEFAULT 0, session_expires INTEGER NOT NULL DEFAULT 0, session_id TEXT UNIQUE, payment_intent TEXT UNIQUE, paid_at TEXT, shipping_name TEXT, postal_code TEXT, shipping_address TEXT)"
 ];
 const automationDatabases=new WeakSet();
 async function ensureAutomation(db){
