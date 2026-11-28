@@ -359,41 +359,6 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
-  // Temporary one-use sandbox-only verification.
-  if(pathname.startsWith("/api/sandbox-test/")&&request.method==="GET"){
-    const token=pathname.slice("/api/sandbox-test/".length);
-    if(!/^[a-f0-9]{64}$/.test(token))return json({error:"not found"},404);
-    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,"0")).join("");
-    if(hash!=="1be01bbd5e8268ec1fdb48616e55e4611323ab40ec74ee08f7a70fd583831612")return json({error:"not found"},404);
-    const db=env.DB,key=env.STRIPE_TEST_SECRET_KEY;
-    if(typeof key!=="string"||!key.startsWith("sk_test_"))return json({error:"test key required"},503);
-    await db.prepare("CREATE TABLE IF NOT EXISTS stripe_sandbox_checkout_fixture (id TEXT PRIMARY KEY, session_id TEXT, checkout_url TEXT, payment_ok INTEGER NOT NULL DEFAULT 0, refund_ok INTEGER NOT NULL DEFAULT 0, error_stage TEXT)").run();
-    const claim=await db.prepare("INSERT OR IGNORE INTO stripe_sandbox_checkout_fixture(id) VALUES(?)").bind(hash).run();
-    if(!claim.meta.changes)return json({error:"already used"},409);
-    const testEnv={STRIPE_SECRET_KEY:key};
-    const account=await stripeCall(testEnv,"account");
-    if(account.id!=="acct_1UdUvZFZj6W6MV5A")return json({error:"wrong sandbox"},503);
-    const call=async(path,params,idempotency)=>{
-      const res=await fetch("https://api.stripe.com/v1/"+path,{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/x-www-form-urlencoded","Idempotency-Key":idempotency+"-"+hash},body:new URLSearchParams(params),signal:AbortSignal.timeout(12000)});
-      const data=await res.json();
-      return {status:res.status,data};
-    };
-    let error=null;
-    try{
-      const pm=await call("payment_methods",{type:"card","card[token]":"tok_visa"},"sandbox-method");
-      if(pm.status!==200||pm.data.livemode!==false||!pm.data.id?.startsWith("pm_"))throw Error("payment method creation HTTP "+pm.status);
-      const p=await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:pm.data.id,confirm:"true",return_url:stripeOrigin+"/",description:"touchCD sandbox verification 3000 + 500"},"sandbox-intent");
-      if(p.status!==200||p.data.livemode!==false||p.data.status!=="succeeded"||p.data.amount_received!==3500)throw Error("payment confirmation HTTP "+p.status);
-      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET payment_ok=1 WHERE id=?").bind(hash).run();
-      const refund=await stripeCall(testEnv,"refunds",{payment_intent:p.data.id,amount:"3500"},"sandbox-refund-"+hash);
-      if(refund.amount!==3500||refund.status!=="succeeded"||refund.payment_intent!==p.data.id)throw Error("refund not complete");
-      await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET refund_ok=1 WHERE id=?").bind(hash).run();
-    }catch(e){error=String(e?.message||"unknown").slice(0,120);}
-    const session=await stripeCall(testEnv,"checkout/sessions",{mode:"payment","excluded_payment_method_types[0]":"konbini","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD テスト商品（実際の請求なし）","line_items[0][quantity]":"1","line_items[1][price_data][currency]":"jpy","line_items[1][price_data][unit_amount]":"500","line_items[1][price_data][product_data][name]":"テスト送料","line_items[1][quantity]":"1",success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/","adaptive_pricing[enabled]":"false"},"sandbox-interactive-"+hash);
-    if(session.livemode!==false||session.amount_total!==3500||session.currency!=="jpy"||session.status!=="open"||!session.id.startsWith("cs_test_")||!session.url?.startsWith("https://checkout.stripe.com/"))return json({error:"unexpected session"},503);
-    await db.prepare("UPDATE stripe_sandbox_checkout_fixture SET session_id=?,checkout_url=?,error_stage=? WHERE id=?").bind(session.id,session.url,error,hash).run();
-    return json({sandbox:true,checkout:true,real_charge:0});
-  }
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
