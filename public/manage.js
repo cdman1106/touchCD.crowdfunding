@@ -14,6 +14,8 @@ let selected = null;
 let selectionRevision = 0;
 const pickupSearch = $("pickup-search");
 const compactCode = (value) => String(value || "").trim().replaceAll("-", "").toUpperCase();
+const legacyCode = (entry) => entry.pickup_code ? compactCode(entry.id).slice(0, 12) : "";
+const matchesPickup = (entry, code) => Boolean(entry.pickup_code && [compactCode(entry.pickup_code), legacyCode(entry)].includes(compactCode(code)));
 
 async function api(path, body, method = "PUT") {
   const headers = {};
@@ -101,7 +103,7 @@ function renderEntry(entry) {
       actions.className = "entry-actions";
       if (shipping) {
         addEntryAction(actions, "発送済みにする", "shipped", projectId, { id: entry.id }, "発送済みとして記録しました。");
-      } else if (compactCode(pickupSearch.value) === compactCode(entry.pickup_code)) {
+      } else if (matchesPickup(entry, pickupSearch.value)) {
         addEntryAction(actions, "受取済みにする", "pickup", projectId, { id: entry.id, code: pickupSearch.value }, "受取済みにしました。");
       }
       if (entry.paid_receipt_id && !entry.receipt_sent_at) {
@@ -211,7 +213,7 @@ function addEntryAction(container, label, route, projectId, body, success) {
 
 function renderEntries() {
   const filter = compactCode(pickupSearch.value);
-  const matching = filter ? reservations.filter((entry) => compactCode(entry.pickup_code).includes(filter)) : reservations;
+  const matching = filter ? reservations.filter((entry) => entry.pickup_code && (compactCode(entry.pickup_code).includes(filter) || legacyCode(entry).includes(filter))) : reservations;
   $("entries").replaceChildren(...matching.map(renderEntry));
   if (!matching.length) {
     const empty = document.createElement("li");

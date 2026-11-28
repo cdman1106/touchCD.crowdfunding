@@ -188,7 +188,7 @@ function initializeBooking() {
         const result = await api("reservations", { ...reservation, verificationId, code });
         if (current !== round || !dialog.open) return;
         set("success-text", "メール認証が完了し、無料予約を受け付けました。条件を満たしたら同じアドレスへお支払いをご案内します。");
-        set("booking-reference", `予約番号 ${result.id} ／ ${reservation.fulfillment === "shipping" ? "自宅配送" : "会場受取"}`);
+        set("booking-reference", `予約番号 ${result.id.slice(0, 8).toUpperCase()} ／ ${reservation.fulfillment === "shipping" ? "自宅配送" : "会場受取"}（番号を覚える必要はありません）`);
         $("cancel-after-booking").hidden = false;
         loadCampaign().catch(() => {});
       }

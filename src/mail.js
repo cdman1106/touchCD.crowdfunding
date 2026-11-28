@@ -1,6 +1,7 @@
 const codeLifetimeMs = 10 * 60_000;
 const resendDelayMs = 60_000;
-const pickupCode = (id) => id.replaceAll("-", "").slice(0, 12).toUpperCase().match(/.{1,4}/g).join("-");
+const pickupCode = (id) => id.slice(0, 8).toUpperCase();
+const legacyPickupCode = (id) => id.replaceAll("-", "").slice(0, 12).toUpperCase();
 const asEmail = (value) => typeof value === "string" ? value.trim().toLowerCase() : "";
 const validEmail = (email) => email.length <= 254 && /^[^\s\x00-\x1f\x7f@,<>]+@[^\s\x00-\x1f\x7f@,<>]+\.[^\s\x00-\x1f\x7f@,<>]+$/.test(email);
 const uuidLike = (value) => typeof value === "string" && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value);
@@ -178,11 +179,12 @@ function receiptText(campaign, quantity, code, entry = {}) {
   const shipping = entry.fulfillment === "shipping";
   const delivery = shipping
     ? [`受取方法：自宅配送（送料 ${amount(entry.shipping_fee)}）`, `発送案内：${campaign.shippingNote || "製造成立後にご案内します。"}`]
-    : ["製造が決まった場合、当日は受付でこのメールをお見せください。", `受取コード：${code}`, `受取案内：${campaign.pickup}`];
+    : ["製造が決まった場合、当日はこの支払い完了メールの画面を会場スタッフにお見せください。番号を覚える必要はありません。", `受取コード：${code}`, `受取案内：${campaign.pickup}`];
   return [
     "お支払いを確認しました。",
 
     `作品：${campaign.title} / ${campaign.artist}`,
+    ...(entry.name ? [`お名前：${entry.name}`] : []),
     `個数：${quantity}個`,
     `お支払い金額：${amount(campaign.price * quantity + (entry.shipping_fee || 0))}（税込）`,
     ...delivery,
@@ -213,7 +215,7 @@ async function deliverReceipt(env, campaign, id) {
 async function markPickedUp(request, db, campaign) {
   const form = await readBody(request);
   if (!uuidLike(form?.id) || typeof form.code !== "string" ||
-      form.code.replaceAll("-", "").toUpperCase().trim() !== pickupCode(form.id).replaceAll("-", "")) {
+      ![pickupCode(form.id), legacyPickupCode(form.id)].includes(form.code.replaceAll("-", "").toUpperCase().trim())) {
     return json({ error: "受取コードをご確認ください。" }, 400);
   }
   const result = await db.prepare(`

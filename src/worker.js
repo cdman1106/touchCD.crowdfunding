@@ -207,7 +207,7 @@ async function editReservation(request, env, campaign) {
     return json({ error: "予約内容をご確認ください。" }, 400);
   }
   const db = env.DB;
-  const entry = await db.prepare("SELECT fulfillment, shipping_fee FROM reservations WHERE id = ? AND campaign_id = ?").bind(id, campaign.id).first();
+  const entry = await db.prepare("SELECT name, fulfillment, shipping_fee FROM reservations WHERE id = ? AND campaign_id = ?").bind(id, campaign.id).first();
   if (!entry) return json({ error: "予約が見つかりません。" }, 404);
   const receiptId = crypto.randomUUID();
   const updated = db.prepare(`
