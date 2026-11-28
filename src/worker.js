@@ -359,6 +359,66 @@ async function handleRequest(request, env) {
   const url = new URL(request.url);
   const { pathname, origin } = url;
   const route = parseRelease(pathname);
+  // BEGIN TEMPORARY SANDBOX QA -- no live Stripe credentials, no reservation writes.
+  if(pathname.startsWith("/api/sandbox-qa/")&&request.method==="GET"){
+    const input=pathname.slice("/api/sandbox-qa/".length);
+    if(!/^[a-f0-9]{64}$/.test(input))return json({error:"not found"},404);
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(input))),b=>b.toString(16).padStart(2,"0")).join("");
+    if(hash!=="f44c9e4e539721b991fcfbb81894759fa715f8ad13a89957d7d20974c2988483")return json({error:"not found"},404);
+    const db=env.DB;
+    await db.prepare("CREATE TABLE IF NOT EXISTS sandbox_qa_results(id TEXT PRIMARY KEY, stage TEXT, auth_ok INTEGER DEFAULT 0, checkout_ok INTEGER DEFAULT 0, expired_ok INTEGER DEFAULT 0, payment_ok INTEGER DEFAULT 0, decline_ok INTEGER DEFAULT 0, refund_ok INTEGER DEFAULT 0, methods TEXT, error_code TEXT)").run();
+    const claim=await db.prepare("INSERT OR IGNORE INTO sandbox_qa_results(id,stage) VALUES(?,'started')").bind(hash).run();
+    if(!claim.meta.changes)return json({error:"already used"},409);
+    let stage="key", checkout=null;
+    const key=env.STRIPE_TEST_SECRET_KEY;
+    const call=async(path,params,idempotency)=>{
+      if(typeof key!=="string"||!/^sk_test_/.test(key))throw Error("not_test_key");
+      const response=await fetch("https://api.stripe.com/v1/"+path,{method:params?"POST":"GET",headers:{Authorization:"Bearer "+key,...(params?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(idempotency?{"Idempotency-Key":idempotency}:{})},...(params?{body:new URLSearchParams(params)}:{}),signal:AbortSignal.timeout(12000)});
+      const data=await response.json();
+      if(!response.ok){const error=Error("stripe_http_"+response.status);error.stripeCode=data.error?.code;throw error;}
+      return data;
+    };
+    const flag=async(column)=>{await db.prepare("UPDATE sandbox_qa_results SET "+column+"=1 WHERE id=?").bind(hash).run();};
+    const unique="touchcd-sandbox-qa-"+hash;
+    try{
+      if(typeof key!=="string"||!key.startsWith("sk_test_"))throw Error("not_test_key");
+      stage="account";
+      const account=await call("account");
+      if(account.id!=="acct_1UdUvZFZj6W6MV5A")throw Error("wrong_sandbox_account");
+      await flag("auth_ok");
+      stage="checkout";
+      checkout=await call("checkout/sessions",{mode:"payment","excluded_payment_method_types[0]":"konbini","line_items[0][price_data][currency]":"jpy","line_items[0][price_data][unit_amount]":"3000","line_items[0][price_data][product_data][name]":"touchCD SANDBOX TEST","line_items[0][quantity]":"1","line_items[1][price_data][currency]":"jpy","line_items[1][price_data][unit_amount]":"500","line_items[1][price_data][product_data][name]":"TEST shipping","line_items[1][quantity]":"1",success_url:stripeOrigin+"/",cancel_url:stripeOrigin+"/","adaptive_pricing[enabled]":"false",expires_at:String(Math.floor(Date.now()/1000)+1860),"metadata[touchcd_qa]":"sandbox"},unique+"-checkout");
+      if(checkout.livemode!==false||checkout.amount_total!==3500||checkout.currency!=="jpy"||checkout.status!=="open"||checkout.payment_status!=="unpaid")throw Error("checkout_mismatch");
+      await flag("checkout_ok");
+      await db.prepare("UPDATE sandbox_qa_results SET methods=? WHERE id=?").bind(JSON.stringify(checkout.payment_method_types),hash).run();
+      stage="expiry";
+      const expired=await call("checkout/sessions/"+encodeURIComponent(checkout.id)+"/expire",{},unique+"-expire");
+      if(expired.livemode!==false||expired.status!=="expired"||expired.payment_status!=="unpaid")throw Error("expiry_mismatch");
+      await flag("expired_ok");
+      stage="payment";
+      const payment=await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_visa",confirm:"true",description:"touchCD sandbox QA; no real money","metadata[touchcd_qa]":"sandbox"},unique+"-pay");
+      if(payment.livemode!==false||payment.status!=="succeeded"||payment.amount_received!==3500||payment.currency!=="jpy")throw Error("payment_mismatch");
+      await flag("payment_ok");
+      stage="refund";
+      const refund=await call("refunds",{payment_intent:payment.id,amount:"3500","metadata[touchcd_qa]":"sandbox"},unique+"-refund");
+      if(refund.livemode!==false||refund.payment_intent!==payment.id||refund.amount!==3500||refund.currency!=="jpy"||refund.status!=="succeeded")throw Error("refund_mismatch");
+      const charge=await call("charges/"+encodeURIComponent(payment.latest_charge));
+      if(charge.livemode!==false||!charge.refunded||charge.amount_refunded!==3500)throw Error("refund_reconcile_mismatch");
+      await flag("refund_ok");
+      stage="decline";
+      let declined=false;
+      try{await call("payment_intents",{amount:"3500",currency:"jpy","payment_method_types[0]":"card",payment_method:"pm_card_chargeDeclined",confirm:"true",description:"touchCD sandbox decline QA"},unique+"-decline");}catch(e){if(e.stripeCode==="card_declined")declined=true;else throw e;}
+      if(!declined)throw Error("decline_not_detected");
+      await flag("decline_ok");
+      await db.prepare("UPDATE sandbox_qa_results SET stage='complete' WHERE id=?").bind(hash).run();
+      return json({complete:true,live_charge:0});
+    }catch(e){
+      if(checkout?.livemode===false&&stage==="checkout"){try{await call("checkout/sessions/"+encodeURIComponent(checkout.id)+"/expire",{},unique+"-expire");}catch{}}
+      await db.prepare("UPDATE sandbox_qa_results SET stage=?,error_code=? WHERE id=?").bind(stage,String(e.stripeCode||e.message).slice(0,80),hash).run();
+      return json({error:"sandbox test stopped",stage},503);
+    }
+  }
+  // END TEMPORARY SANDBOX QA
   if (pathname === "/api/stripe/webhook" && request.method === "POST") return stripeWebhook(request,env);
   const deliveryInvite=pathname.match(/^\/delivery-payment\/([a-f0-9-]{72})$/);
   if(deliveryInvite)return startDeliveryCheckout(request,env,deliveryInvite[1]);
