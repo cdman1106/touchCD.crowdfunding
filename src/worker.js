@@ -438,11 +438,12 @@ async function handleRequest(request, env) {
         getSettings(env.DB, campaign), publicData(env, campaign), getPaymentSettings(env.DB, campaign),
         env.DB.prepare(`SELECT r.id, r.name, r.email, r.quantity, r.paid, r.created_at, r.email_verified_at,
           r.pickup_at, r.paid_receipt_id, r.payment_url, r.fulfillment, r.shipping_fee, r.postal_code,
-          r.shipping_address, dc.status AS delivery_change_status, dc.sent_at AS delivery_change_sent_at, dc.paid_at AS delivery_change_paid_at, dc.shipping_name AS delivery_shipping_name, dc.amount AS delivery_change_amount, p.sent_at AS receipt_sent_at, n.number AS pickup_number, so.guide_sent_at AS stripe_guide_sent_at, CASE WHEN so.reservation_id IS NULL THEN 0 ELSE 1 END AS stripe_managed FROM reservations r
+          r.shipping_address, dc.status AS delivery_change_status, dc.sent_at AS delivery_change_sent_at, dc.paid_at AS delivery_change_paid_at, dc.shipping_name AS delivery_shipping_name, dc.amount AS delivery_change_amount, rf.status AS refund_status, rf.amount AS refund_amount, p.sent_at AS receipt_sent_at, n.number AS pickup_number, so.guide_sent_at AS stripe_guide_sent_at, CASE WHEN so.reservation_id IS NULL THEN 0 ELSE 1 END AS stripe_managed FROM reservations r
           LEFT JOIN payment_receipts p ON p.id = r.paid_receipt_id
           LEFT JOIN pickup_numbers n ON n.reservation_id = r.id
           LEFT JOIN stripe_orders so ON so.reservation_id = r.id
           LEFT JOIN delivery_changes dc ON dc.reservation_id = r.id
+          LEFT JOIN automation_refunds rf ON rf.reservation_id = r.id
           WHERE r.campaign_id = ? ORDER BY r.created_at DESC`).bind(campaign.id).all(),
       ]);
       return json({ settings, data, paymentSettings, automation:await automationOverview(env.DB,campaign.id), stripeConfigured:stripeReady(env), reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? String(entry.pickup_number ?? pickupCode(entry.id)) : null })) });
