@@ -30,7 +30,7 @@ function commerceDisclosure(request, env) {
       "・受け取り後のお客様の取り扱いによる破損、紛失、改造、通常使用による摩耗",
       "・アーティストが販売者である取引で、当方が正常品を引き渡した後にアーティスト側の保管・販売過程で破損した場合。ご購入先にご連絡ください。",
     ].join("\n")],
-    ["不備のご連絡と返送料", "商品に不備があった場合は、受け取り後、状況が分かり次第、注文情報と不備の内容を上記メールアドレスまでお知らせください。当方に原因がある不備で返送が必要な場合、返送料は当方が負担します。"],
+    ["不備のご連絡と返送料", "商品に不備があった場合は、受取後7日以内を目安に、注文情報と不備の内容（可能であれば写真）を上記メールアドレスまでお知らせください。7日を過ぎた場合も法令上の権利は制限しません。当方に原因がある不備で返送が必要な場合、返送料は当方が負担します。"],
   ];
   const rows = [
     ["販売事業者", "松尾 一慶（屋号 慶）"],
@@ -46,7 +46,9 @@ function commerceDisclosure(request, env) {
     ["申込期間・販売条件", "受付締切、予約上限、製造に必要な入金数は、各作品ページに記載します。"],
     ["商品の引渡時期・方法", "製造条件を満たした作品は、ご予約時に選んだ方法でお渡しします。各作品ページに会場受取の日時・場所や自宅配送の発送予定を表示します。"],
     ["製造不成立・企画中止の場合", "支払期限までに製造に必要な入金数に達しなかった場合、または商品を提供できなくなった場合、お支払い済みの金額を送料を含めて全額返金します。対象のお客様にはメールでご案内します。返金の反映時期はカード会社によって異なります。"],
-    ["引渡しの遅延・会場受取ができない場合", "製造・輸送の遅延や公演の延期・中止等の場合は、メールにて状況と代替の受取方法をご案内します。当日受け取れない場合はお問い合わせください。配送への変更で送料が必要な場合は事前にご案内します。"],
+    ["引渡しの遅延・会場受取ができない場合", "製造・輸送の遅延や公演の延期・中止等の場合は、メールにて状況と代替の受取方法をご案内します。お客様の都合で会場受取ができない場合は、国内配送へ変更できます。送料は1注文500円（税込）です。追加決済・配送先の確認についてお問い合わせください。主催者側の事情による変更は別途ご案内します。"],
+    ["配送方法・お届け目安", "日本国内へ日本郵便の定形外郵便で発送します。通常は発送後2〜3配達日程度が目安ですが、地域・天候・休日等で遅れる場合があります。原則土日祝日の配達、追跡番号、日時指定、郵便局の損害補償はありません。発送から10日経っても届かない場合はお問い合わせください。当方が調査し、状況に応じて対応します。"],
+    ["住所誤り・返送・再発送", "お客様の住所入力誤りや長期不在等によって返送された場合、再発送に必要な実費をご負担いただきます。金額は事前にご案内します。当方の誤りによる再発送費用は当方が負担します。"],
     ...returnTerms,
   ];
   const terms = rows.map(([label, value]) => `<div><dt>${escaped(label)}</dt><dd>${escaped(value)}</dd></div>`).join("");
@@ -55,7 +57,7 @@ function commerceDisclosure(request, env) {
     <h1>特定商取引法に基づく表記</h1>
     <p class="commerce-intro">touchCDが販売する先行予約商品の取引条件です。</p>
     <dl class="commerce-details">${terms}</dl>
-    <section id="personal-information" class="release-section"><h2>個人情報の取扱い</h2><p>touchCDは、予約時等に取得した氏名・メールアドレス・配送先・注文情報を、メール認証、予約管理、決済確認、商品受渡し・配送、問い合わせ対応、返金、取引記録及び不正防止に利用します。決済にはStripe、サイト運営やメール送信にはCloudflare等のサービスを使用し、配送を委託する場合は配送業者に必要な情報を提供します。カード情報はStripeの決済画面に入力してください。会場受取では受取確認に必要な情報をスタッフが取り扱います。法令に従い個人情報を管理し、開示・訂正・利用停止等のご相談は上記メールアドレスで受け付けます。</p></section><p class="commerce-contact">touchCDへのお問い合わせは <a href="https://www.instagram.com/touchcdyasann/" rel="noopener noreferrer">公式Instagram（@touchcdyasann）</a> へご連絡ください。</p>
+    <section id="personal-information" class="release-section"><h2>個人情報の取扱い</h2><p>touchCDは、予約時等に取得した氏名・メールアドレス・配送先・注文情報を、メール認証、予約管理、決済確認、商品受渡し・配送、問い合わせ対応、返金、取引記録及び不正防止に利用します。決済にはStripe、サイト運営やメール送信にはCloudflare等のサービスを使用し、配送を委託する場合は配送業者に必要な情報を提供します。カード情報はStripeの決済画面に入力してください。会場受取では受取確認に必要な情報をスタッフが取り扱います。法令に従い個人情報を管理します。取引記録等は法令所定の期間（帳簿・書類の種類により5年または7年等）保存し、その他の情報は利用目的に必要な期間に限り保有し、不要となった情報は適切に削除する方針です。開示・訂正・利用停止等のご相談は上記メールアドレスで受け付けます。</p></section><p class="commerce-contact">touchCDへのお問い合わせは <a href="https://www.instagram.com/touchcdyasann/" rel="noopener noreferrer">公式Instagram（@touchcdyasann）</a> へご連絡ください。</p>
   </main>`, { title: "特定商取引法に基づく表記｜touchCD", description: "touchCDの販売事業者、支払い、受け取り、返金に関するご案内。" });
 }
 
@@ -67,10 +69,11 @@ function purchaseNotices() {
       <div><dt>無料予約・成立条件</dt><dd>メール認証で予約できます。予約時は0円で、カードの自動請求はありません。無料予約目標の達成と製造成立は別です。作品ページの入金目標を満たしてから製造します。</dd></div>
       <div><dt>お支払い・キャンセル</dt><dd>後日メールでお知らせする期限までにクレジットカードでお支払いください。決済案内の準備前は作品ページから無料キャンセルできます。準備後で未払いの場合はお問い合わせください。未払いのまま期限を過ぎると購入できない場合があります。お支払い後のお客様都合によるキャンセル・返品・交換はできません。</dd></div>
       <div><dt>不成立・中止・遅延</dt><dd>必要な入金数に届かなければ製造せず、入金済みの方へ送料を含む全額を返金します。製造や輸送の事情で引渡しが遅れる場合は、登録メールアドレスへ状況と新しい予定をお知らせします。商品を提供できなくなった場合は送料を含む全額を返金します。返金の反映時期はカード会社により異なります。</dd></div>
-      <div><dt>会場受取・配送</dt><dd>会場では支払い完了メールをスタッフにご提示ください。ライブ入場料・飲食代は商品代金に含まれません。公演の延期・中止や当日受け取れない場合は、配送への変更などについてtouchCDへご相談ください。追加送料が必要な場合は事前にご案内します。配送先の誤入力や長期不在による返送は、再発送前にお問い合わせください。</dd></div>
+      <div><dt>会場受取・配送</dt><dd>会場では支払い完了メールをスタッフにご提示ください。ライブ入場料・飲食代は商品代金に含まれません。お客様の都合で当日受け取れない場合は、1注文500円（税込）で国内配送へ変更できます。公演の延期・中止等の場合は別途ご案内します。住所の誤入力や長期不在等による返送は再発送実費をご負担ください。当方の誤りによる再発送費用は当方が負担します。</dd></div>
+      <div><dt>自宅配送について</dt><dd>日本郵便の定形外郵便（国内のみ）。発送後2〜3配達日程度が目安です。土日祝日は原則配達なし。追跡番号・日時指定・郵便局の損害補償はありません。地域や天候等で遅れる場合があります。発送から10日経っても届かない場合はtouchCDへお問い合わせください。調査のうえ対応します。<a class="text-link" href="https://www.post.japanpost.jp/send/domestic/date/index.php" target="_blank" rel="noopener noreferrer">日本郵便のお届け日数検索</a></dd></div>
       <div><dt>商品・スマートフォン</dt><dd>ミニディスクは通常のCDプレーヤーでは再生できません。NFC対応端末、対応する設定とインターネット接続が必要です。通信料や外部サービスの利用料はお客様の負担です。小さな部品があるため乳幼児の手の届かない場所で保管してください。写真と実物の色味等に差が生じる場合があります。</dd></div>
       <div><dt>音楽・映像・Webページ</dt><dd>リンク先や提供コンテンツ、公開時期・利用期間は作品によって異なります。外部サービスの仕様変更・配信終了等で利用できなくなる場合があります。購入は著作権の譲渡を意味しません。音源や映像の無断転載・再配布等はお控えください。</dd></div>
-      <div><dt>不良品・誤配送</dt><dd>商品不備や誤配送は、受取後に注文情報と不備の内容を添えてtouchCDへご連絡ください。当方の責任による不備は必要に応じ返品・交換等で対応し、必要な返送料は当方が負担します。法令上の権利を制限するものではありません。</dd></div>
+      <div><dt>不良品・誤配送</dt><dd>商品不備や誤配送は、受取後7日以内を目安に注文情報と不備の内容（可能であれば写真）を添えてtouchCDへご連絡ください。当方の責任による不備は必要に応じ返品・交換等で対応し、必要な返送料は当方が負担します。法令上の権利を制限するものではありません。</dd></div>
       <div><dt>メール・個人情報</dt><dd>認証・支払い・受取・返金等の重要なお知らせは登録メールアドレスへ送ります。迷惑メールフォルダもご確認ください。メールアドレスや住所は予約管理・連絡・決済・配送等に利用します。</dd></div>
     </dl>
     <p><a class="text-link" href="/tokushoho">特定商取引法に基づく表記・お問い合わせ</a> ／ <a class="text-link" href="/tokushoho#personal-information">個人情報の取扱い</a></p>
@@ -231,7 +234,7 @@ function projectPage(request, data) {
         <h2>受け取り方法</h2>
         <div class="delivery-options">
           <div><h3>会場受取</h3><p>${pickupDetail}</p><p>当日はtouchCDから届いた支払い完了メールの画面を会場スタッフにご提示ください。</p></div>
-          ${shipping ? `<div><h3>自宅配送</h3><p>${escaped(campaign.shippingNote)}</p><p>送料 ${amount(campaign.shippingFee)}（税込・1注文）</p></div>` : ""}
+          ${shipping ? `<div><h3>自宅配送</h3><p>${escaped(campaign.shippingNote)}</p><p>送料 ${amount(campaign.shippingFee)}（税込・1注文）</p><p>${escaped(postalDeliveryNote)}</p></div>` : ""}
         </div>
       </section>
       <section class="release-section" id="audio">
@@ -298,7 +301,7 @@ function izumiWadaPreview(request, data = null) {
   const paymentText = dateLabel(paymentDeadline);
   const liveMap = "https://maps.app.goo.gl/fk9Xe1W17gVkM38V8?g_st=il";
   const stage = (label, count, target, kind, note) => `<div class="reservation-stage"><div class="count-label"><span id="${kind}-label">${label}</span><span><strong id="${kind}-count">${count}</strong> / <span id="${kind}-target">${target}</span>個</span></div><progress id="${kind}-progress" aria-labelledby="${kind}-label" value="${Math.min(count,target)}" max="${target}"></progress><p class="progress-note" id="${kind}-note">${note}</p></div>`;
-  const booking = `<div class="izumi-reservation-panel"><div class="izumi-booking-header"><span class="pill" id="campaign-status">${escaped(data?.status || "受付準備中")}</span><span>受付上限なし</span></div><h3>無料予約で応援する</h3><div class="izumi-reservation-price"><strong>${amount(price)}<small> 税込／個</small></strong><span>今のお支払い 0円</span></div><div class="izumi-deadline-banner"><small>無料予約締切（日本時間）</small><strong>${escaped(deadlineText)}</strong></div>${data ? stage("無料予約",reserved,reserveGoal,"reservation",reserved>=reserveGoal?"支払い案内の条件を達成しました。":`あと${reserveGoal-reserved}個で支払い案内へ。`)+stage("入金済み",paid,goal,"payment",paid>=goal?"製造条件を達成しました。":`あと${goal-paid}個分のお支払いで製造決定。`) : '<p>予約受付の準備中です。製造には25個分の入金が必要です。</p>'}<p>無料予約が${reserveGoal}個に達したら、予約者にまとめてメールで決済URLをご案内します。入金が${goal}個分以上集まれば製造成立です。企画全体の販売上限はありません。</p><p class="izumi-schedule-note">支払い期限：${escaped(paymentText)}（日本時間）。決済案内は予約者へメールで送ります。お支払いはクレジットカードのみです。</p><div class="izumi-receive-grid"><div><b>ライブ会場受取</b><span>送料無料</span><small>${escaped(data?.campaign.pickup || "2027年2月24日（水）Music Bar Bridge（福岡市中央区浄水通5-10 ケインズ浄水B1F）。19:30開演。商品の受取時間・場所の詳細は予約者へご案内します。")}</small><a class="izumi-event-map" href="${liveMap}" target="_blank" rel="noopener noreferrer">会場の地図を見る ↗</a><small>ライブの入場料・飲食代は商品代金に含まれません。</small></div><div><b>自宅配送</b><span>送料500円／注文</span><small>無料予約時に郵便番号・配送先住所を入力</small></div></div><p class="izumi-checkout-note">製造不成立の場合、お支払い済みの商品代金・送料は全額返金します。<a href="/tokushoho">取引条件・お問い合わせ先</a></p><p class="izumi-checkout-note"><a href="#purchase-notices">ご予約前の注意事項（キャンセル・返品・受取・対応端末）</a></p><button type="button" class="izumi-main-button izumi-purchase-button" id="open-reserve" disabled>無料で予約する</button><p id="booking-note" role="status">${data?.accepting ? "予約時のお支払いは0円です。" : "現在、予約受付を準備中または停止中です。"}</p><button type="button" class="izumi-outline" data-cancel-reservation>無料予約をキャンセルする</button><button type="button" class="izumi-outline" id="share-project">この作品をシェア</button><p id="share-result" role="status"></p></div>`;
+  const booking = `<div class="izumi-reservation-panel"><div class="izumi-booking-header"><span class="pill" id="campaign-status">${escaped(data?.status || "受付準備中")}</span><span>受付上限なし</span></div><h3>無料予約で応援する</h3><div class="izumi-reservation-price"><strong>${amount(price)}<small> 税込／個</small></strong><span>今のお支払い 0円</span></div><div class="izumi-deadline-banner"><small>無料予約締切（日本時間）</small><strong>${escaped(deadlineText)}</strong></div>${data ? stage("無料予約",reserved,reserveGoal,"reservation",reserved>=reserveGoal?"支払い案内の条件を達成しました。":`あと${reserveGoal-reserved}個で支払い案内へ。`)+stage("入金済み",paid,goal,"payment",paid>=goal?"製造条件を達成しました。":`あと${goal-paid}個分のお支払いで製造決定。`) : '<p>予約受付の準備中です。製造には25個分の入金が必要です。</p>'}<p>無料予約が${reserveGoal}個に達したら、予約者にまとめてメールで決済URLをご案内します。入金が${goal}個分以上集まれば製造成立です。企画全体の販売上限はありません。</p><p class="izumi-schedule-note">支払い期限：${escaped(paymentText)}（日本時間）。決済案内は予約者へメールで送ります。お支払いはクレジットカードのみです。</p><div class="izumi-receive-grid"><div><b>ライブ会場受取</b><span>送料無料</span><small>${escaped(data?.campaign.pickup || "2027年2月24日（水）Music Bar Bridge（福岡市中央区浄水通5-10 ケインズ浄水B1F）。19:30開演。商品の受取時間・場所の詳細は予約者へご案内します。")}</small><a class="izumi-event-map" href="${liveMap}" target="_blank" rel="noopener noreferrer">会場の地図を見る ↗</a><small>ライブの入場料・飲食代は商品代金に含まれません。</small></div><div><b>自宅配送</b><span>送料500円／注文</span><small>${escaped(data?.campaign.shippingNote || izumiShippingSchedule)}</small><small>${escaped(postalDeliveryNote)}</small><small>無料予約時に郵便番号・配送先住所を入力</small></div></div><p class="izumi-checkout-note">製造不成立の場合、お支払い済みの商品代金・送料は全額返金します。<a href="/tokushoho">取引条件・お問い合わせ先</a></p><p class="izumi-checkout-note"><a href="#purchase-notices">ご予約前の注意事項（キャンセル・返品・受取・対応端末）</a></p><button type="button" class="izumi-main-button izumi-purchase-button" id="open-reserve" disabled>無料で予約する</button><p id="booking-note" role="status">${data?.accepting ? "予約時のお支払いは0円です。" : "現在、予約受付を準備中または停止中です。"}</p><button type="button" class="izumi-outline" data-cancel-reservation>無料予約をキャンセルする</button><button type="button" class="izumi-outline" id="share-project">この作品をシェア</button><p id="share-result" role="status"></p></div>`;
   return shell(request, `<main class="izumi-page section-shell" ${data ? `data-project="${escaped(data.campaign.slug)}" data-artist="${escaped(data.campaign.artistSlug)}"` : ""}>
     <a class="crumb" href="/#releases">← touchCD 作品一覧</a>
     <p class="izumi-preview-notice">無料予約から商品化へ｜お支払いは予約目標達成後にメールでご案内します。</p>
