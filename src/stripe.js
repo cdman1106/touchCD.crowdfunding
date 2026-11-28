@@ -102,7 +102,6 @@ async function stripeWebhook(request,env){
   const digest=Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,encoder.encode(time+"."+raw))),b=>b.toString(16).padStart(2,"0")).join("");
   if(!fields.some(([k,v])=>{if(k!=="v1"||!v||v.length!==digest.length)return false;let diff=0;for(let i=0;i<v.length;i++)diff|=v.charCodeAt(i)^digest.charCodeAt(i);return diff===0;}))return json({error:"signature"},400);
   let e;try{e=JSON.parse(raw);}catch{return json({error:"body"},400);}
-  if(e.type==="checkout.session.expired"&&e.data?.object?.livemode===true&&e.data.object.metadata?.touchcd_smoke_test==="091fdaaed96a5cab94bdb0d243af92f75188dae6c3b9a2d0eaa5a8d849edd4ec"){await env.DB.prepare("UPDATE payment_smoke_test SET webhook_ok=1 WHERE id=?").bind("091fdaaed96a5cab94bdb0d243af92f75188dae6c3b9a2d0eaa5a8d849edd4ec").run();return json({received:true});}
   if(!["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(e.type))return json({received:true});
   const s=e.data?.object;
   if(s?.metadata?.delivery_change&&s.payment_status==="paid")return recordDeliveryPayment(env,s);
