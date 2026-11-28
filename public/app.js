@@ -24,12 +24,12 @@ function initializeBooking() {
     const booked = data.unlimited ? reserved + demoCount : Math.min(capacity, reserved + demoCount);
     const canReserve = accepting && (data.unlimited || booked < capacity);
     set("reservation-count", booked);
-    set("reservation-note", booked >= reservationGoal ? "支払い案内の条件を達成しました。" : `あと${reservationGoal - booked}個で支払い案内へ。`);
+    set("reservation-note", data.outcome==="failed"?"募集を終了しました。":data.outcome==="succeeded"?"製造が決定しました。":booked >= reservationGoal ? "支払い案内の条件を達成しました。" : `あと${reservationGoal - booked}個で支払い案内へ。`);
     $("reservation-progress").max = reservationGoal;
     set("reservation-target", reservationGoal);
     $("reservation-progress").value = Math.min(booked, reservationGoal);
     set("payment-count", paid);
-    set("payment-note", paid >= paidGoal ? "製造条件を達成しました。" : `あと${paidGoal - paid}個分のお支払いで製造決定。`);
+    set("payment-note", data.outcome==="failed"?"製造不成立となりました。入金済みの方は返金案内をご確認ください。":data.outcome==="succeeded"?"製造が決定しました。":paid >= paidGoal ? "製造条件を達成しました。" : `あと${paidGoal - paid}個分のお支払いで製造決定。`);
     $("payment-progress").max = paidGoal;
     set("payment-target", paidGoal);
     $("payment-progress").value = Math.min(paid, paidGoal);
