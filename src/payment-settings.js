@@ -64,7 +64,7 @@ function paymentGuide(campaign, { name, quantity, price, fulfillment, shipping_f
     `お支払い期限：${paymentDate.format(new Date(deadline))}（日本時間）`,
     `お受け取り：${shipping ? `自宅配送（${campaign.shippingNote || "成立後に発送案内"}）` : campaign.pickup}`,
     "",
-    "お支払い方法：クレジットカード決済（Stripe）のみ",
+    "お支払い方法：Stripe決済（クレジットカード・PayPay・対応端末のApple Pay／Google Pay。表示される方法は利用条件によります。）",
     "お支払い後のお客様都合によるキャンセル・返品はお受けできません。",
     `返品・不良品対応（特定商取引法に基づく表記）：${disclosureUrl}`,
     `決済リンク：${link}`,

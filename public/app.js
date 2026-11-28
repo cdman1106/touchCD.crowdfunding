@@ -76,7 +76,7 @@ function initializeBooking() {
       field.hidden = hidden;
       field.querySelector("input").disabled = hidden;
     });
-    set("form-intro", data.campaign.demo ? "確認版では、入力したメールアドレスをサーバーに送りません。認証コードは次の画面に表示されます。" : "今お支払いいただく金額は0円です。後日のお支払いはクレジットカードのみです。");
+    set("form-intro", data.campaign.demo ? "確認版では、入力したメールアドレスをサーバーに送りません。認証コードは次の画面に表示されます。" : "今お支払いいただく金額は0円です。後日、Stripeでクレジットカード・PayPay等の利用可能な方法を選んでお支払いいただけます。");
     $("resend-code").hidden = data.campaign.demo;
     set("submit-reserve", data.campaign.demo ? "確認コードを表示する" : "認証コードを受け取る");
     delivery.hidden = data.campaign.shippingFee == null;
