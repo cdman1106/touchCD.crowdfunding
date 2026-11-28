@@ -12,6 +12,7 @@ async function issueStripeGuide(request,env,campaign){
   const body=await readBody(request);
   if(!uuidLike(body?.id)||campaign.demo)return json({error:"予約を選択してください。"},400);
   const db=env.DB,state=await publicData(env,campaign),settings=await getPaymentSettings(db,campaign);
+  if(state.outcome)return json({error:"この企画は判定済みです。"},409);
   if(state.reserved<state.reservationGoal)return json({error:"無料予約の目標に達していません。"},409);
   const deadline=Math.floor(Date.parse(settings.deadline)/1000);
   if(!(deadline>Date.now()/1000+1860))return json({error:"支払期限を31分以上先に設定してください。"},409);
@@ -30,8 +31,13 @@ async function issueStripeGuide(request,env,campaign){
   }
   if(o.deadline<=Date.now()/1000+1860)return json({error:"決済期限が終了間近です。"},409);
   if(o.guide_sent_at)return json({saved:true,alreadySent:true});
+  const priorNotice=await db.prepare("SELECT state FROM automation_mail WHERE reservation_id=? AND kind=\'guide\'").bind(entry.id).first();
+  if(priorNotice?.state==="sent"){await db.prepare("UPDATE stripe_orders SET guide_sent_at=? WHERE reservation_id=? AND guide_sent_at IS NULL").bind(new Date().toISOString(),entry.id).run();return json({saved:true,alreadySent:true});}
+  if(!await claimNotice(db,entry.id,"guide"))return json({error:"案内送信の確認中です。"},409);
   const guide=paymentGuide({...campaign,price:o.unit_price},{...entry,quantity:o.quantity,price:o.unit_price,shipping_fee:o.shipping_fee},new Date(o.deadline*1000).toISOString(),stripeOrigin+"/payment/"+o.token,stripeOrigin+"/tokushoho");
-  if(!await sendMail(env,entry.email,guide.subject,guide.text,"stripe-guide/"+entry.id))return json({error:"決済案内の送信に失敗しました。同じリンクで再試行できます。"},503);
+  const sent=await sendMail(env,entry.email,guide.subject,guide.text,"stripe-guide/"+entry.id);
+  await finishNotice(db,entry.id,"guide",sent);
+  if(!sent)return json({error:"決済案内の送信に失敗しました。同じリンクで再試行できます。"},503);
   await db.prepare("UPDATE stripe_orders SET guide_sent_at=? WHERE reservation_id=?").bind(new Date().toISOString(),entry.id).run();
   return json({saved:true});
 }
@@ -45,6 +51,8 @@ async function startStripeCheckout(request,env,token){
   if(!stripeReady(env)||!db)return paymentPage(request,"お支払い準備中","現在、決済を受け付けていません。","",503);
   let o=await stripeOrder(db,token);
   if(!o)return paymentPage(request,"決済リンク無効","支払い案内メールのリンクをご確認ください。","",404);
+  const final=await automationState(db,o.campaign_id);
+  if(final?.outcome==="failed")return paymentPage(request,"製造不成立","企画は終了しました。お支払い済みの場合は返金のご案内をご確認ください。");
   if(o.paid)return paymentPage(request,"お支払い済み","支払い完了メールをご確認ください。");
   if(o.deadline<=Date.now()/1000)return paymentPage(request,"支払期限終了","touchCDへお問い合わせください。","",410);
   if(request.method==="GET"||request.method==="HEAD"){
@@ -94,12 +102,19 @@ async function stripeWebhook(request,env){
   const digest=Array.from(new Uint8Array(await crypto.subtle.sign("HMAC",key,encoder.encode(time+"."+raw))),b=>b.toString(16).padStart(2,"0")).join("");
   if(!fields.some(([k,v])=>{if(k!=="v1"||!v||v.length!==digest.length)return false;let diff=0;for(let i=0;i<v.length;i++)diff|=v.charCodeAt(i)^digest.charCodeAt(i);return diff===0;}))return json({error:"signature"},400);
   let e;try{e=JSON.parse(raw);}catch{return json({error:"body"},400);}
-  if(e.type!=="checkout.session.completed")return json({received:true});
+  if(!["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(e.type))return json({received:true});
   const s=e.data?.object;
-  if(!s||!s.livemode||s.mode!=="payment"||s.payment_status!=="paid"||s.currency!=="jpy"||!uuidLike(s.client_reference_id)||s.metadata?.reservation_id!==s.client_reference_id||typeof s.payment_intent!=="string")return json({received:true});
+  if(s?.metadata?.delivery_change&&s.payment_status==="paid")return recordDeliveryPayment(env,s);
+  if(!s||!uuidLike(s.client_reference_id)||s.metadata?.reservation_id!==s.client_reference_id||s.payment_status!=="paid")return json({received:true});
+  return recordStripePayment(env,s);
+}
+async function recordStripePayment(env,s){
+  if(!s||!s.livemode||s.mode!=="payment"||s.payment_status!=="paid"||s.currency!=="jpy"||!uuidLike(s.client_reference_id)||s.metadata?.reservation_id!==s.client_reference_id||typeof s.payment_intent!=="string")return json({error:"invalid payment"},409);
   const db=env.DB,o=await db.prepare("SELECT o.*,r.paid,r.quantity AS current_quantity,r.shipping_fee AS current_shipping_fee FROM stripe_orders o JOIN reservations r ON r.id=o.reservation_id WHERE o.reservation_id=?").bind(s.client_reference_id).first();
-  if(!o)return json({received:true});
+  if(!o)return json({error:"reservation not found"},409);
   if(o.session_id!==s.id||String(o.generation)!==s.metadata.generation||o.unit_price*o.quantity+o.shipping_fee!==s.amount_total||o.current_quantity!==o.quantity||o.current_shipping_fee!==o.shipping_fee||(o.payment_intent&&o.payment_intent!==s.payment_intent))return json({error:"reconciliation required"},409);
+  const final=await automationState(db,o.campaign_id);
+  if(final?.outcome){if(o.payment_intent===s.payment_intent)return json({received:true});return json({error:"late payment reconciliation required"},409);}
   const campaign=await findCampaign(env,{id:o.campaign_id},true);if(!campaign)return json({error:"campaign unavailable"},503);
   if(!o.paid){
     const result=await editReservation(new Request(stripeOrigin+"/api/manage/reservation",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:o.reservation_id,quantity:o.quantity,paid:true})}),env,{...campaign,title:o.title,price:o.unit_price},true);

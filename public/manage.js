@@ -10,6 +10,8 @@ const pathFor = ({ artistSlug, slug }) => `/artists/${artistSlug}/${slug}`;
 let key = "";
 let adminChallenge = "";
 let stripeConfigured = false;
+let automationConfig=null;
+$("save-automation").addEventListener("click",async()=>{if(!selected)return;const enabled=$("automation-enabled").checked,refundsEnabled=$("automation-refunds").checked;if(refundsEnabled&&!enabled){$("automation-feedback").textContent="自動運用を有効にしてください。";return;}if(refundsEnabled&&!automationConfig?.refundsEnabled&&!confirm("不成立時の条件を満たす決済を全額返金します。有効化しますか？"))return;const id=selected,button=$("save-automation");button.disabled=true;try{await api(`automation?id=${encodeURIComponent(id)}`,{enabled,refundsEnabled});if(selected===id)await loadReservations(id);$("automation-feedback").textContent="設定を保存しました。";}catch(e){$("automation-feedback").textContent=e.message;}finally{button.disabled=false;}});
 let batchInProgress = false;
 let batchEligible = false;
 const bulkGuide = $("bulk-stripe-guide");
@@ -92,12 +94,15 @@ function renderEntry(entry) {
   const shipping = entry.fulfillment === "shipping";
   state.textContent = entry.pickup_at ? (shipping ? "発送済み" : "受取済み") : entry.paid ? `入金済み · ${receipt}` :
     entry.email_verified_at ? "アドレス認証済み · 入金待ち" : "旧予約 · 入金待ち";
+  if(entry.refund_status)state.textContent=entry.refund_status==="succeeded"?`返金済み · ¥${entry.refund_amount.toLocaleString("ja-JP")}`:entry.refund_status==="review"?"返金：要確認":"返金：処理中";
+  if(entry.delivery_change_status)state.textContent+=" · 配送変更："+({issued:"支払い待ち",paid:"入金済み",review:"要確認"}[entry.delivery_change_status]||entry.delivery_change_status);
   li.append(info, state);
   const projectId = selected;
   if (shipping) {
     const delivery = document.createElement("p");
     delivery.className = "pickup-entry-code";
     delivery.textContent = `自宅配送 · 送料 ¥${entry.shipping_fee.toLocaleString("ja-JP")} · ${entry.shipping_address ? "〒"+entry.postal_code+" "+entry.shipping_address : "配送先未登録・発送前に要確認"}`;
+    if(entry.delivery_change_status==="paid")delivery.textContent=`配送変更費用 ¥${entry.delivery_change_amount.toLocaleString("ja-JP")} 入金済み · ${entry.delivery_shipping_name||entry.name} 様 · 〒${entry.postal_code} ${entry.shipping_address}`;
     li.append(delivery);
   }
   if (entry.paid) {
@@ -110,8 +115,11 @@ function renderEntry(entry) {
       actions.className = "entry-actions";
       if (shipping) {
         addEntryAction(actions, "発送済みにする", "shipped", projectId, { id: entry.id }, "発送済みとして記録しました。");
-      } else if (matchesPickup(entry, pickupSearch.value)) {
+      } else if (!entry.delivery_change_status && matchesPickup(entry, pickupSearch.value)) {
         addEntryAction(actions, "受取済みにする", "pickup", projectId, { id: entry.id, code: pickupSearch.value }, "受取済みにしました。");
+      }
+      if(!shipping && stripeConfigured && (!entry.delivery_change_status || (entry.delivery_change_status==="issued"&&!entry.delivery_change_sent_at)) && automationConfig?.outcome!=="failed"){
+        const b=document.createElement("button");b.type="button";b.className="small-button";b.textContent="配送変更1,500円の決済案内を送る";b.addEventListener("click",async()=>{if(!confirm("ライブ終了・未受取・購入者の配送希望を確認済みですか？ 1,500円の追加決済案内を送信します。"))return;b.disabled=true;try{await api(`delivery-change?id=${encodeURIComponent(projectId)}`,{id:entry.id,confirmed:true});if(selected===projectId)await loadReservations(projectId);status.textContent="配送変更の案内を送信しました。";}catch(e){showError(e);}finally{b.disabled=false;}});actions.append(b);
       }
       if (entry.paid_receipt_id && !entry.receipt_sent_at) {
         addEntryAction(actions, "支払い完了メールを再試行", "payment-receipt", projectId, { id: entry.id }, "支払い完了メールを送信しました。");
@@ -119,7 +127,7 @@ function renderEntry(entry) {
       li.append(actions);
     }
   }
-  if (entry.pickup_at) return li;
+  if (entry.pickup_at || entry.refund_status || automationConfig?.outcome==="failed") return li;
   const form = document.createElement("form");
   const quantityField = document.createElement("label");
   quantityField.textContent = "個数";
@@ -146,7 +154,7 @@ function renderEntry(entry) {
     } catch (error) { showError(error); }
     finally { save.disabled = false; }
   });
-  if (!entry.paid) li.append(renderPaymentActions(entry, projectId));
+  if (!entry.paid && !automationConfig?.outcome) li.append(renderPaymentActions(entry, projectId));
   return li;
 }
 
@@ -245,6 +253,10 @@ async function loadReservations(projectId) {
     if (input.name && Object.hasOwn(result.settings, input.name)) input.value = result.settings[input.name];
   }
   stripeConfigured = Boolean(result.stripeConfigured);
+  automationConfig=result.automation||{};
+  $("automation-enabled").checked=!!automationConfig.enabled;
+  $("automation-refunds").checked=!!automationConfig.refundsEnabled;
+  $("automation-state").textContent=[automationConfig.enabled?"自動運用：有効":"自動運用：停止",automationConfig.refundsEnabled?"自動返金：有効":"自動返金：停止",automationConfig.outcome?`製造判定：${automationConfig.outcome==="succeeded"?"成立":"不成立"}（${automationConfig.paid}/${automationConfig.goal}個）`:"製造判定：未確定",automationConfig.lastChecked?`最終確認：${new Date(automationConfig.lastChecked).toLocaleString("ja-JP")}`:"",automationConfig.lastError||"",...(automationConfig.notices||[]).map(n=>`${n.kind} ${n.state}: ${n.count}件`),...(automationConfig.refunds||[]).map(n=>`返金 ${n.status}: ${n.count}件`)].filter(Boolean).join(" ／ ");
   reservations = result.reservations;
   $("download").hidden = !reservations.length;
   renderEntries();

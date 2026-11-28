@@ -28,6 +28,8 @@ async function savePaymentSettings(request, db, campaign) {
   if (checkoutUrl === null || !validPaymentDeadline(deadline)) {
     return json({ error: "決済リンクは https:// から始まるURL、期限は日本時間で入力してください。" }, 400);
   }
+  const old=await getPaymentSettings(db,campaign);
+  if(deadline!==old.deadline && await db.prepare("SELECT 1 AS exists_flag FROM stripe_orders WHERE campaign_id=? LIMIT 1").bind(campaign.id).first())return json({error:"決済案内発行後は支払期限を変更できません。お問い合わせください。"},409);
   await db.prepare(`
     INSERT INTO project_payment_settings (campaign_id, checkout_url, deadline)
     VALUES (?, ?, ?)

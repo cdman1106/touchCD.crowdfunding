@@ -76,7 +76,7 @@
       </section>
       <section class="admin-card" hidden id="payment-panel">
         <h2>支払い案内の設定</h2>
-        <p class="field-note" id="payment-progress"></p><button type="button" id="bulk-stripe-guide" class="primary" hidden>未送信の予約者へ一括送信</button><p id="bulk-stripe-status" class="field-note" role="status"></p>
+        <p class="field-note" id="payment-progress"></p><button type="button" id="bulk-stripe-guide" class="primary" hidden>未送信の予約者へ一括送信</button><p id="bulk-stripe-status" class="field-note" role="status"></p><section id="automation-panel"><h3>決済の自動運用</h3><p id="automation-state" class="field-note"></p><label><input id="automation-enabled" type="checkbox"> 目標達成時の決済案内・未入金通知・製造判定・結果通知</label><label><input id="automation-refunds" type="checkbox"> 不成立時のStripe全額返金（照合できた決済のみ）</label><button type="button" id="save-automation" class="small-button">自動運用設定を保存</button><p id="automation-feedback" role="status" class="field-note"></p></section>
         <form id="payment-settings-form">
           <div class="fields two">
             <label>支払期限（日本時間）<input name="deadline" type="datetime-local"></label>

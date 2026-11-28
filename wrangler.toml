@@ -4,6 +4,9 @@ compatibility_date = "2026-01-01"
 keep_vars = true
 preview_urls = false
 
+[triggers]
+crons = ["*/10 * * * *"]
+
 [observability]
 enabled = true
 head_sampling_rate = 1
