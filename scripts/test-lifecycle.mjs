@@ -122,7 +122,7 @@ async function flow(success){
     check(tag+" 支払期限前の製造判定・返金なし",db.sql.prepare("SELECT outcome FROM automation_campaigns").get().outcome===null&&stripe.refundCalls===0);
     // End the fixture's reservation/payment periods without changing the real clock.
     const past=new Date(Date.now()-4*3600_000).toISOString();
-    db.sql.prepare("UPDATE projects SET deadline=? WHERE id='fixture'").run(past);
+    db.sql.prepare("UPDATE projects SET deadline=? WHERE id='fixture'").run(new Date(Date.now()-5*3600_000).toISOString());
     db.sql.prepare("UPDATE project_payment_settings SET deadline=? WHERE campaign_id='fixture'").run(past);
     db.sql.prepare("UPDATE stripe_orders SET deadline=?").run(Math.floor(Date.now()/1000)-7200);
     if(!success){
