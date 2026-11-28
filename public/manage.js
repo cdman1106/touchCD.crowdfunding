@@ -14,8 +14,8 @@ let selected = null;
 let selectionRevision = 0;
 const pickupSearch = $("pickup-search");
 const compactCode = (value) => String(value || "").trim().replaceAll("-", "").toUpperCase();
-const legacyCode = (entry) => entry.pickup_code ? compactCode(entry.id).slice(0, 12) : "";
-const matchesPickup = (entry, code) => Boolean(entry.pickup_code && [compactCode(entry.pickup_code), legacyCode(entry)].includes(compactCode(code)));
+const legacyCode = (entry) => entry.pickup_code && entry.pickup_number == null ? compactCode(entry.id).slice(0, 12) : "";
+const matchesPickup = (entry, code) => Boolean(entry.pickup_code && [compactCode(entry.pickup_code), legacyCode(entry)].filter(Boolean).includes(compactCode(code)));
 
 async function api(path, body, method = "PUT") {
   const headers = {};
@@ -213,7 +213,7 @@ function addEntryAction(container, label, route, projectId, body, success) {
 
 function renderEntries() {
   const filter = compactCode(pickupSearch.value);
-  const matching = filter ? reservations.filter((entry) => entry.pickup_code && (compactCode(entry.pickup_code).includes(filter) || legacyCode(entry).includes(filter))) : reservations;
+  const matching = filter ? reservations.filter((entry) => entry.pickup_code && (entry.pickup_number != null ? compactCode(entry.pickup_code) === filter : compactCode(entry.pickup_code).includes(filter) || legacyCode(entry).includes(filter))) : reservations;
   $("entries").replaceChildren(...matching.map(renderEntry));
   if (!matching.length) {
     const empty = document.createElement("li");

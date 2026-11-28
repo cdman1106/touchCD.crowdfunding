@@ -214,8 +214,12 @@ async function deliverReceipt(env, campaign, id) {
 
 async function markPickedUp(request, db, campaign) {
   const form = await readBody(request);
-  if (!uuidLike(form?.id) || typeof form.code !== "string" ||
-      ![pickupCode(form.id), legacyPickupCode(form.id)].includes(form.code.replaceAll("-", "").toUpperCase().trim())) {
+  if (!uuidLike(form?.id) || typeof form.code !== "string") {
+    return json({ error: "受取コードをご確認ください。" }, 400);
+  }
+  const assigned = await db.prepare("SELECT number FROM pickup_numbers WHERE reservation_id = ? AND campaign_id = ?").bind(form.id, campaign.id).first();
+  const presented = form.code.replaceAll("-", "").toUpperCase().trim();
+  if (!(assigned ? [String(assigned.number)] : [pickupCode(form.id), legacyPickupCode(form.id)]).includes(presented)) {
     return json({ error: "受取コードをご確認ください。" }, 400);
   }
   const result = await db.prepare(`

@@ -221,11 +221,20 @@ async function editReservation(request, env, campaign) {
       COALESCE((SELECT capacity FROM campaign_settings WHERE campaign_id = ?), ?))
   `).bind(quantity, Number(paid), quantity, Number(paid), receiptId, campaign.id, id, Number(paid), quantity, Number(isIzumiCampaign(campaign)),
     campaign.id, id, quantity, campaign.id, campaign.id, defaults(campaign).capacity);
+  const allocate = db.prepare(`
+    INSERT INTO pickup_numbers (reservation_id, campaign_id, number)
+    SELECT r.id, r.campaign_id, COALESCE((SELECT MAX(n.number) FROM pickup_numbers n WHERE n.campaign_id = r.campaign_id), 0) + 1
+    FROM reservations r WHERE r.id = ? AND r.campaign_id = ? AND r.paid = 1 AND r.fulfillment = 'pickup'
+    AND r.paid_receipt_id = ?
+    ON CONFLICT(reservation_id) DO NOTHING
+  `).bind(id, campaign.id, receiptId);
   const queued = db.prepare(`
     INSERT INTO payment_receipts (id, reservation_id, message, created_at)
-    SELECT ?, id, ?, ? FROM reservations WHERE id = ? AND campaign_id = ? AND paid_receipt_id = ?
-  `).bind(receiptId, receiptText(campaign, quantity, pickupCode(id), entry), Date.now(), id, campaign.id, receiptId);
-  const [result] = await db.batch([updated, queued]);
+    SELECT ?, r.id, CASE WHEN r.fulfillment = 'pickup' THEN REPLACE(?, '受取コード：__TOUCHCD_PICKUP_NUMBER__', '受取コード：' || CAST(n.number AS TEXT)) ELSE ? END, ?
+    FROM reservations r LEFT JOIN pickup_numbers n ON n.reservation_id = r.id
+    WHERE r.id = ? AND r.campaign_id = ? AND r.paid_receipt_id = ?
+  `).bind(receiptId, receiptText(campaign, quantity, "__TOUCHCD_PICKUP_NUMBER__", entry), receiptText(campaign, quantity, "", entry), Date.now(), id, campaign.id, receiptId);
+  const [result] = await db.batch([updated, allocate, queued]);
   if (!result.meta.changes) return json({ error: "受取済み、上限超過、または入金済みの個数変更に該当します。" }, 409);
   const receipt = paid ? await deliverReceipt(env, campaign, id) : "unavailable";
   return json({ saved: true, receipt });
@@ -337,11 +346,12 @@ async function handleRequest(request, env) {
         getSettings(env.DB, campaign), publicData(env, campaign), getPaymentSettings(env.DB, campaign),
         env.DB.prepare(`SELECT r.id, r.name, r.email, r.quantity, r.paid, r.created_at, r.email_verified_at,
           r.pickup_at, r.paid_receipt_id, r.payment_url, r.fulfillment, r.shipping_fee, r.postal_code,
-          r.shipping_address, p.sent_at AS receipt_sent_at FROM reservations r
+          r.shipping_address, p.sent_at AS receipt_sent_at, n.number AS pickup_number FROM reservations r
           LEFT JOIN payment_receipts p ON p.id = r.paid_receipt_id
+          LEFT JOIN pickup_numbers n ON n.reservation_id = r.id
           WHERE r.campaign_id = ? ORDER BY r.created_at DESC`).bind(campaign.id).all(),
       ]);
-      return json({ settings, data, paymentSettings, reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? pickupCode(entry.id) : null })) });
+      return json({ settings, data, paymentSettings, reservations: entries.results.map((entry) => ({ ...entry, pickup_code: entry.paid && entry.fulfillment === "pickup" ? String(entry.pickup_number ?? pickupCode(entry.id)) : null })) });
     }
     if (pathname === "/api/manage/payment-settings" && request.method === "PUT") return savePaymentSettings(request, env.DB, campaign);
     if (pathname === "/api/manage/payment-link" && request.method === "PUT") return savePaymentLink(request, env.DB, campaign);

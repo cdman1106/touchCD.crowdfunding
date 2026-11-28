@@ -251,7 +251,7 @@ function notFound(request) {
 
 
 function pickupExample(request) {
-  const message = receiptText({ ...sampleCampaigns[0], pickup: "ライブ当日 18:00〜20:00 / 会場受付（サンプル）" }, 1, "72D4963A");
+  const message = receiptText({ ...sampleCampaigns[0], pickup: "ライブ当日 18:00〜20:00 / 会場受付（サンプル）" }, 1, "1");
   return shell(request, `<main class="shell pickup-example">
     <a class="crumb" href="/artists/yonagi/nami-no-atode">← サンプル企画</a>
     <h1>支払い完了メールの見本</h1>
