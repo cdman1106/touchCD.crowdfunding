@@ -484,8 +484,7 @@ async function initializeEmptyDatabase(db) {
 }
 
 async function ensureReleaseDetails(db) {
-  await ensureAutomation(db);
-  if (verifiedDatabases.has(db)) return;
+  if (verifiedDatabases.has(db)) { await ensureAutomation(db); return; }
   const ledger = await db.prepare("SELECT name FROM sqlite_schema WHERE name = 'd1_migrations'").bind().first();
   const applied = ledger && await db.prepare("SELECT name FROM d1_migrations WHERE name = ?").bind(releaseMigration).first();
   if (!applied && !(await initializeEmptyDatabase(db))) {
@@ -512,6 +511,7 @@ async function ensureReleaseDetails(db) {
       }
     }
   }
+  await ensureAutomation(db);
   verifiedDatabases.add(db);
 }
 
