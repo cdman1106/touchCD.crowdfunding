@@ -49,11 +49,11 @@ async function startStripeCheckout(request,env,token){
   if(o.deadline<=Date.now()/1000)return paymentPage(request,"支払期限終了","touchCDへお問い合わせください。","",410);
   if(request.method==="GET"||request.method==="HEAD"){
     const project=await db.prepare("SELECT pickup,shipping_note,artist_slug,slug FROM projects WHERE id=?").bind(o.campaign_id).first();
-    const delivery=o.fulfillment==="shipping"?"自宅配送":"会場受取";
+    const delivery=o.fulfillment==="shipping"?"自宅配送（定形外郵便）":"会場受取";
     const schedule=(o.fulfillment==="shipping"?project?.shipping_note:project?.pickup)||"作品ページおよび案内メールをご確認ください。";
     const deadline=new Date(o.deadline*1000).toLocaleString("ja-JP",{timeZone:"Asia/Tokyo"});
     const link=project?(o.campaign_id===izumiCampaignId?"/works/izumi-wada":"/artists/"+encodeURIComponent(project.artist_slug)+"/"+encodeURIComponent(project.slug)):"/";
-    const rows=[["作品",o.title],["数量",o.quantity+"個"],["税込単価",amount(o.unit_price)],["送料（注文単位）",amount(o.shipping_fee)],["お支払い総額",amount(o.unit_price*o.quantity+o.shipping_fee)],["支払方法・期限","クレジットカードのみ／"+deadline+"（日本時間）"],["受取方法・時期",delivery+"／"+schedule],["キャンセル・返品","決済後のお客様都合のキャンセル・返品・交換は不可。不備・誤配送はtouchCDにご連絡ください。"],["製造不成立・中止","商品代金・送料を全額返金します。"],["利用条件","NFC対応端末と通信環境が必要です。音源・利用期間等は作品ページでご確認ください。"]];
+    const rows=[["作品",o.title],["数量",o.quantity+"個"],["税込単価",amount(o.unit_price)],["送料（注文単位）",amount(o.shipping_fee)],["お支払い総額",amount(o.unit_price*o.quantity+o.shipping_fee)],["支払方法・期限","クレジットカードのみ／"+deadline+"（日本時間）"],["受取方法・時期",delivery+"／"+schedule],["配送・受取の注意",o.fulfillment==="shipping"?postalDeliveryNote+" 発送から10日経っても届かない場合はお問い合わせください。住所誤り等による返送の再発送は実費負担。":"支払い完了メールを提示。お客様都合の配送変更は1注文500円。"],["キャンセル・返品","決済後のお客様都合のキャンセル・返品・交換は不可。不備・誤配送は受取後7日以内を目安にtouchCDへご連絡ください。法令上の権利は制限しません。"],["製造不成立・中止","商品代金・送料を全額返金します。"],["利用条件","NFC対応端末と通信環境が必要です。音源・利用期間等は作品ページでご確認ください。"]];
     const summary='<dl class="commerce-details">'+rows.map(([k,v])=>'<div><dt>'+escaped(k)+'</dt><dd>'+escaped(v)+'</dd></div>').join("")+'</dl>';
     return paymentPage(request,"touchCD お支払い内容の確認","内容をご確認のうえStripe決済画面へ進んでください。変更が必要な場合は決済せずtouchCDへお問い合わせください。",summary+'<p><a href="'+escaped(link)+'">作品・注意事項を見る</a> ／ <a href="/tokushoho">取引条件・お問い合わせ</a></p><form method="post"><button type="submit" class="primary">クレジットカード決済へ進む</button></form>');
   }
