@@ -65,3 +65,6 @@ initialSchema.push("CREATE TABLE IF NOT EXISTS stripe_orders (reservation_id TEX
 database.close();
 await mkdir(output, { recursive: true });
 await writeFile(new URL("index.js", output), `const siteAssets = ${JSON.stringify(Object.fromEntries(files))};\nconst initialSchema = ${JSON.stringify(initialSchema)};\nconst initialMigrations = ${JSON.stringify(initialMigrations)};\nconst releaseMigration = ${JSON.stringify(releaseMigration)};\nconst releaseColumns = ${JSON.stringify(releaseColumns)};\n${worker}`);
+
+// Block deployment if isolated payment lifecycle checks fail.
+await import("./test-lifecycle.mjs");
